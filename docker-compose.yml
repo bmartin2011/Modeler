@@ -33,8 +33,10 @@ services:
     working_dir: /workspace/apps/portal
     volumes:
       - .:/workspace
+      - portal_node_modules:/workspace/apps/portal/node_modules
     command: sh -c "corepack enable && pnpm install && pnpm run dev --host 0.0.0.0"
     environment:
+      CI: "true"
       VITE_API_PROXY_TARGET: http://api:8000
       VITE_API_PUBLIC_BASE_URL: http://localhost:18100
     ports:
@@ -91,3 +93,4 @@ volumes:
   modeler_chroma_data:
   modeler_fuseki_data:
   modeler_postgres_data:
+  portal_node_modules:

@@ -46,10 +46,23 @@ main {
   gap: 8px;
 }
 
+.lens-controls {
+  display: flex;
+  gap: 8px;
+}
+
 button {
-  width: 40px;
-  height: 40px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.feedback-controls button {
+  width: 40px;
+  height: 40px;
+}
+
+.lens-controls button {
+  min-height: 40px;
+  padding-inline: 12px;
 }
