@@ -37,4 +37,25 @@ describe("App", () => {
     expect(await screen.findByText("John")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/views/milky-way?lens=organization");
   });
+
+  it("shows a retry path when the Milky Way request fails", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("API unavailable"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          lens: "value_stream",
+          sectors: [{ id: "vs.discover", name: "Discover Opportunity", rings: ["purpose"] }],
+          overlays: [],
+          collapsible_branches: []
+        })
+      } as Response);
+
+    render(<App />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to load the Milky Way.");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("Discover Opportunity")).toBeInTheDocument();
+  });
 });

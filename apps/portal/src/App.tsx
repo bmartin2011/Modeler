@@ -21,20 +21,31 @@ const answer = {
 export default function App() {
   const [lens, setLens] = useState<Lens>("value_stream");
   const [projection, setProjection] = useState<Projection>();
+  const [loadError, setLoadError] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
 
-    void getMilkyWay(lens).then((nextProjection) => {
-      if (active) {
-        setProjection(nextProjection);
-      }
-    });
+    setLoadError(false);
+    setProjection(undefined);
+
+    void getMilkyWay(lens)
+      .then((nextProjection) => {
+        if (active) {
+          setProjection(nextProjection);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoadError(true);
+        }
+      });
 
     return () => {
       active = false;
     };
-  }, [lens]);
+  }, [lens, requestVersion]);
 
   return (
     <main>
@@ -47,7 +58,18 @@ export default function App() {
           Organization Lens
         </button>
       </nav>
-      {projection ? <MilkyWayMap projection={projection} /> : <p>Loading Milky Way...</p>}
+      {loadError ? (
+        <section className="load-error" role="alert">
+          <p>Unable to load the Milky Way.</p>
+          <button type="button" onClick={() => setRequestVersion((version) => version + 1)}>
+            Retry
+          </button>
+        </section>
+      ) : projection ? (
+        <MilkyWayMap projection={projection} />
+      ) : (
+        <p>Loading Milky Way...</p>
+      )}
       <QuestionPanel answer={answer} />
       <FeedbackControls />
       <ArtifactCards />

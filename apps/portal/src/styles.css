@@ -13,7 +13,8 @@ main {
 
 .milky-way,
 .question-panel,
-.artifact-card {
+.artifact-card,
+.load-error {
   background: #ffffff;
   border: 1px solid #d9deea;
   border-radius: 8px;
