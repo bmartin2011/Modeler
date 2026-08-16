@@ -104,3 +104,47 @@ def test_repository_traverses_incoming_relationships():
     incoming = repo.related_to("person.john", "reports_to")
 
     assert {entity.id for _rel, entity in incoming} == {"person.maya", "person.luis"}
+
+
+def test_seed_contains_archimate_metadata_for_core_entities():
+    repo = _repo()
+
+    required = {
+        "person.john": "Business Actor",
+        "role.sales_lead": "Business Role",
+        "process.qualify_opportunity": "Business Process",
+        "app.crm": "Application Component",
+        "data.qualified_opportunity": "Data Object",
+        "cap.opportunity_management": "Capability",
+        "vs.customer_lifecycle": "Value Stream",
+        "gate.ops_review": "Constraint",
+        "pain.manual_handoff": "Assessment",
+    }
+
+    for entity_id, archimate_type in required.items():
+        assert repo.get_entity(entity_id).archimate_type == archimate_type
+
+
+def test_each_seed_process_has_core_relationship_context():
+    repo = _repo()
+    process_ids = [
+        "process.attract_prospect",
+        "process.qualify_opportunity",
+        "process.onboard_customer",
+        "process.deliver_service",
+        "process.invoice_customer",
+        "process.resolve_customer_issue",
+    ]
+
+    for process_id in process_ids:
+        context = repo.process_context(process_id)
+        assert context["performers"], process_id
+        assert context["applications"], process_id
+        assert (
+            context["reads"]
+            or context["creates"]
+            or context["updates"]
+            or context["deletes"]
+        ), process_id
+        assert context["capabilities"], process_id
+        assert context["value_streams"], process_id
