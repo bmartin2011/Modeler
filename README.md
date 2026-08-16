@@ -355,6 +355,58 @@ Examples:
 - If a research source leads to useful modeling decisions, promote it in the reviewed source library.
 - If a collapsed branch is often reopened, make the collapse rule stricter.
 
+## Documentation Quality Loop
+
+Documentation is part of the learning system. Modeler should document the codebase, critique the documentation, grade the result, and present evidence before asking humans to trust it.
+
+```mermaid
+flowchart LR
+    A["Code + Docs + Conversation"] --> B["Knowledge Mining"]
+    B --> C["Entity + Triple Extraction"]
+    C --> D["Documentation Generation"]
+    D --> E["Verification + Critique"]
+    E --> F["Confidence + Evidence Report"]
+    F --> G["Human Feedback"]
+    G --> H["Learning Signals"]
+    H --> B
+```
+
+Documentation facts should be stored as auditable knowledge, not loose prose.
+
+```text
+Extracted Fact
+Component: Visual Portal
+Predicate: renders
+Object: Milky Way Viewpoint
+
+Evidence
+- README artifact gallery
+- Design spec visual portal layer
+- Future source code reference, once implemented
+
+Confidence
+0.86
+
+Validation
+Supported by product docs.
+Code evidence pending.
+
+Feedback
+Thumbs up/down, correction, or request for more evidence.
+```
+
+Quality checks should include:
+
+- Coverage: important components, views, services, and decisions are documented.
+- Traceability: documentation claims link to code, specs, conversations, or research.
+- Freshness: docs reflect current implementation and recent decisions.
+- Ambiguity: vague claims are flagged and rewritten or marked as assumptions.
+- Standards alignment: architecture terms match ArchiMate, BPMN, UML/SysML, and local modeling rules.
+- Evidence strength: generated claims expose confidence, source, and validation status.
+- User usefulness: feedback captures whether the documentation answered the user's actual question.
+
+Future documentation updates should meet or exceed the existing product-documentation bar. If an automated update lowers clarity, evidence, coverage, or usefulness, the critique layer should block or flag it before it is presented as trustworthy.
+
 ## Technology Direction
 
 The prototype should run locally with Docker Compose.
@@ -400,4 +452,3 @@ The initial design lives in:
 - [ArchiMate Visual Documentation Portal Design](docs/superpowers/specs/2026-08-16-archimate-visual-portal-design.md)
 
 The next step is to turn the approved design into an implementation plan.
-

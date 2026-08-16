@@ -44,7 +44,7 @@ When answers resolve uncertainty, the affected branches in the visual navigation
 
 ## Core Architecture
 
-The system has seven first-class layers.
+The system has eight first-class layers.
 
 ### 1. Standards Knowledge Base
 
@@ -200,6 +200,51 @@ Visual behavior:
 - Show likely textbook pain points.
 - Drill from high-level ArchiMate viewpoints into BPMN, UML, or SysML detail where appropriate.
 - Let users ask questions directly from the view.
+
+### 8. Documentation Intelligence and Quality Layer
+
+Documentation quality is part of the learning system. The product should document its codebase and architecture artifacts, verify and critique those documents, grade their quality, and present evidence before asking users to trust the result.
+
+This layer should mine knowledge from:
+
+- Source code, tests, configuration, and service definitions.
+- Product documentation and design specs.
+- Conversations, decisions, corrections, and playbook entries.
+- Research sources and standards references.
+- Generated Sphinx pages and visual viewpoint definitions.
+
+Extracted knowledge should be represented as auditable entity facts and triples.
+
+Example triples:
+
+- Visual Portal -> renders -> Milky Way Viewpoint.
+- API -> projects -> RDF graph data.
+- Playbook Decision -> measured by -> KPI.
+- Documentation Claim -> supported by -> source evidence.
+- Component -> documented in -> Sphinx page.
+
+Each documentation claim should carry:
+
+- Entity or artifact.
+- Predicate or relationship.
+- Evidence source.
+- Confidence score.
+- Validation status.
+- Freshness timestamp.
+- Review history.
+- User feedback state.
+
+Documentation critique should grade:
+
+- Coverage: whether important components, services, decisions, and viewpoints are documented.
+- Traceability: whether claims link to code, specs, conversations, standards, or research.
+- Freshness: whether docs match the current implementation and current decisions.
+- Ambiguity: whether vague or overloaded terms are flagged.
+- Standards alignment: whether architecture language matches ArchiMate, BPMN, UML/SysML, and local modeling rules.
+- Evidence strength: whether generated claims expose confidence, provenance, and validation status.
+- Usefulness: whether users judge the documentation helpful for the conversation or task.
+
+Human thumbs up/down, corrections, and requests for better evidence should become learning signals. Automated documentation updates should be blocked or flagged when they reduce clarity, coverage, traceability, evidence quality, or usefulness relative to the existing documentation baseline.
 
 ## Technical Stack
 
