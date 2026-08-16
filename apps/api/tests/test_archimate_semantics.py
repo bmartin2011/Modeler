@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from modeler_api.domain.archimate import (
     SUPPORTED_ARCHIMATE_TYPES,
     is_supported_archimate_type,
@@ -5,6 +7,13 @@ from modeler_api.domain.archimate import (
     relationship_rule_for,
 )
 from modeler_api.domain.models import Confidence, Entity, Relationship
+from modeler_api.domain.repository import KnowledgeRepository
+from modeler_api.domain.seed_loader import load_seed_graph
+
+
+def _repo() -> KnowledgeRepository:
+    graph = load_seed_graph(Path("../../data/seed/acme.json"))
+    return KnowledgeRepository(graph)
 
 
 def test_supported_archimate_types_include_mvp_language():
@@ -77,3 +86,21 @@ def test_models_accept_archimate_and_review_metadata():
     assert entity.review_state == "candidate"
     assert relationship.archimate_relationship == "assignment"
     assert relationship.review_state == "candidate"
+
+
+def test_repository_traverses_outgoing_relationships():
+    repo = _repo()
+
+    outgoing = repo.related_from("gate.ops_review", "indicates")
+
+    assert [(rel.type, entity.id) for rel, entity in outgoing] == [
+        ("indicates", "pain.approval_concentration")
+    ]
+
+
+def test_repository_traverses_incoming_relationships():
+    repo = _repo()
+
+    incoming = repo.related_to("person.john", "reports_to")
+
+    assert {entity.id for _rel, entity in incoming} == {"person.maya", "person.luis"}
