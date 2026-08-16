@@ -79,6 +79,13 @@ def test_reporting_answer_uses_returned_entities_and_evidence():
     assert "Avery" in answer.answer
     assert "Maya" not in answer.answer
     assert "Casey" in answer.unknown[0]
+    assert "delivery gate" not in answer.answer.lower()
+    assert "Priya" not in answer.answer
+    assert "John" not in answer.answer
+    assert answer.next_best_question == (
+        "Should Casey be modeled as reporting to Jordan, partnering with Jordan, "
+        "or owning a separate delivery function?"
+    )
     assert answer.evidence_ids == ["evidence.report", "evidence.partner"]
 
 

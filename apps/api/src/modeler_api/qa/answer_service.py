@@ -59,11 +59,17 @@ class AnswerService:
             if associated_name
             else [f"No unresolved association with {target.name} is modeled."]
         )
+        next_best_question = (
+            f"Should {associated_name} be modeled as reporting to {target.name}, partnering with "
+            f"{target.name}, or owning a separate delivery function?"
+            if associated_name
+            else f"Which reporting relationship should be modeled for {target.name}?"
+        )
         return Answer(
             question=question,
             answer=(
                 f"{report_summary} are verified direct reports to {target.name}. "
-                f"{associated_name} is associated with {target.name}'s delivery gate, but the "
+                f"{associated_name} is associated with {target.name}, but the "
                 "reporting relationship is unresolved."
                 if associated_name
                 else f"{report_summary} are verified direct reports to {target.name}."
@@ -75,10 +81,7 @@ class AnswerService:
                 score=0.86,
                 rationale="Two reporting relationships are verified and one adjacent relationship is unresolved.",
             ),
-            next_best_question=(
-                "Should Priya be modeled as reporting to John, partnering with John, "
-                "or owning a separate delivery function?"
-            ),
+            next_best_question=next_best_question,
         )
 
     def _approval_gate_concentration(self, question: str) -> Answer:
