@@ -23,6 +23,22 @@ class AnswerService:
         )
 
     def _who_reports_to_john(self, question: str) -> Answer:
+        direct_reports = self.repository.find_relationships(
+            type="reports_to", target_id="person.john"
+        )
+        associated_people = self.repository.find_relationships(
+            type="associated_with", target_id="person.john"
+        )
+        if not direct_reports:
+            return Answer(
+                question=question,
+                answer="No verified direct reports to John are present in the current model.",
+                known=[],
+                unknown=["The current seed graph has no reports_to relationships for John."],
+                evidence_ids=[],
+                confidence=Confidence(score=0.0, rationale="No reporting relationships were found."),
+                next_best_question="Which reporting relationship should be modeled for John?",
+            )
         return Answer(
             question=question,
             answer=(
@@ -30,7 +46,11 @@ class AnswerService:
                 "with John's delivery gate, but the reporting relationship is unresolved."
             ),
             known=["Maya reports to John.", "Luis reports to John."],
-            unknown=["Priya is associated with John, but the reporting relationship is unresolved."],
+            unknown=(
+                ["Priya is associated with John, but the reporting relationship is unresolved."]
+                if associated_people
+                else ["No unresolved association with John is modeled."]
+            ),
             evidence_ids=["evidence.seed_org", "evidence.user_luis"],
             confidence=Confidence(
                 score=0.86,
@@ -43,6 +63,19 @@ class AnswerService:
         )
 
     def _approval_gate_concentration(self, question: str) -> Answer:
+        gate_relationships = self.repository.find_relationships(
+            type="requires_gate", target_id="gate.ops_review"
+        )
+        if not gate_relationships:
+            return Answer(
+                question=question,
+                answer="No concentrated approval gate is present in the current model.",
+                known=[],
+                unknown=["No requires_gate relationships were found for Operations Review Gate."],
+                evidence_ids=[],
+                confidence=Confidence(score=0.0, rationale="No approval-gate dependencies were found."),
+                next_best_question="Which value stream should be checked for approval gates?",
+            )
         return Answer(
             question=question,
             answer=(

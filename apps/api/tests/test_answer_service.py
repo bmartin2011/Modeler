@@ -29,3 +29,30 @@ def test_answer_approval_gate_concentration():
     assert "Onboard Customer" in answer.known
     assert "Deliver Service" in answer.known
     assert answer.confidence.score == 0.68
+
+
+def test_answers_consult_repository_relationships():
+    graph = load_seed_graph(Path("../../data/seed/acme.json"))
+    repository = RecordingRepository(KnowledgeRepository(graph))
+    service = AnswerService(repository)
+
+    service.answer("Who reports to John?")
+    service.answer("Where are approval gates concentrated?")
+
+    assert ("reports_to", "person.john") in repository.calls
+    assert ("requires_gate", "gate.ops_review") in repository.calls
+
+
+class RecordingRepository:
+    def __init__(self, repository: KnowledgeRepository) -> None:
+        self.repository = repository
+        self.calls: list[tuple[str | None, str | None]] = []
+
+    def find_relationships(
+        self,
+        type: str | None = None,
+        target_id: str | None = None,
+        source_id: str | None = None,
+    ):
+        self.calls.append((type, target_id))
+        return self.repository.find_relationships(type, target_id, source_id)
