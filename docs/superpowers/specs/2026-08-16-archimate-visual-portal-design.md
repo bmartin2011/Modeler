@@ -268,10 +268,13 @@ External document quality checks should be stricter than internal documentation 
 
 The primary delivery unit is a local Docker Compose prototype.
 
+The operating model is local-first. Modeler should prefer completely local processing to reduce or eliminate operating costs and keep sensitive organization knowledge under user control. LLM-backed interpretation should use Docker Desktop-provided local models or another local OpenAI-compatible endpoint by default. Cloud models, hosted search, managed vector stores, or managed databases should be opt-in adapters that disclose cost, data boundary, retention policy, and reason before data leaves the local environment.
+
 Services:
 
 - Portal UI: browser-based visual navigation and documentation experience.
 - API: application orchestration, graph queries, search facade, and AI interaction boundary.
+- MCP server: agent-facing local tools for asking questions, retrieving views, proposing ArchiMate mappings, critiquing documentation, and recording feedback.
 - RDF store: Apache Jena Fuseki or Eclipse RDF4J for standards semantics, organization facts, provenance, and validation rules.
 - ChromaDB: vector memory over conversations, documents, research snippets, decisions, and examples.
 - Postgres: optional durable application store for users, projects, source metadata, review queues, job history, KPI snapshots, and other relational state that does not belong in the semantic graph.
@@ -287,6 +290,7 @@ Recommended data responsibilities:
 - Postgres stores conventional application records and audit-friendly workflow state when relational modeling is clearer than graph modeling.
 - Redis speeds up repeated reads and coordinates background work when the MVP needs it; it should not be the source of truth.
 - The API projects graph data into frontend-ready JSON for visual traversal.
+- The MCP server exposes selected local capabilities to agents with the same evidence, confidence, trust-boundary, and feedback requirements as the portal.
 - Sphinx renders curated documentation pages and indexed references.
 - SearXNG discovers external sources but does not grant trust by itself.
 

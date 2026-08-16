@@ -1,0 +1,53 @@
+services:
+  api:
+    image: python:3.12-slim
+    working_dir: /workspace/apps/api
+    volumes:
+      - .:/workspace
+    command: sh -c "pip install -e .[dev] && uvicorn modeler_api.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+
+  portal:
+    image: node:22-slim
+    working_dir: /workspace/apps/portal
+    volumes:
+      - .:/workspace
+    command: sh -c "corepack enable && pnpm install && pnpm run dev --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  fuseki:
+    image: stain/jena-fuseki:latest
+    ports:
+      - "3030:3030"
+    environment:
+      ADMIN_PASSWORD: "modeler"
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: modeler
+      POSTGRES_PASSWORD: modeler
+      POSTGRES_DB: modeler
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  searxng:
+    image: searxng/searxng:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/searxng:/etc/searxng

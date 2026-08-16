@@ -1,0 +1,55 @@
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #f7f8fb;
+  color: #172033;
+}
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.milky-way,
+.question-panel,
+.artifact-card {
+  background: #ffffff;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  padding: 20px;
+  margin-block: 16px;
+}
+
+.sector-grid,
+.artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.sector {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.overlay {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.feedback-controls {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}

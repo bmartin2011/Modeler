@@ -466,6 +466,7 @@ The prototype should run locally with Docker Compose.
 ```text
 Portal UI        Visual navigation and artifact display
 API              Orchestration, graph queries, AI boundary
+MCP Server       Agent-facing local tools over the same graph, views, docs, and feedback loop
 RDF Store        Standards semantics, organization facts, validation rules
 ChromaDB         Semantic memory over text, research, conversations, examples
 Postgres         App state, review queues, job history, KPI snapshots
@@ -482,6 +483,65 @@ The stack is hybrid and RDF-first:
 - Postgres stores ordinary application and workflow state.
 - Redis coordinates fast temporary work.
 - SearXNG keeps open research discovery available from day one.
+- Docker Desktop-provided local LLMs are the preferred default for model-backed interpretation during local development; cloud models should be optional adapters, not an assumption.
+
+## Agent And MCP Surface
+
+Modeler should expose an MCP server as a first-class future interface for local agents.
+
+Initial MCP tools should mirror the safest API capabilities:
+
+- Ask organization-grounded questions with evidence, confidence, and trust-boundary labels.
+- Retrieve ArchiMate-aligned entities, relationships, and Milky Way projections.
+- Submit conversational text for candidate ArchiMate mapping without automatically promoting claims to learned facts.
+- Request documentation quality critiques and source-backed improvement suggestions.
+- Record thumbs-up, thumbs-down, corrections, and human override rationale as feedback events.
+
+The MCP surface should run locally by default and use the same local LLM adapter, RDF graph, vector store, source ledger, and critique pipeline as the portal. Agents should receive auditable outputs rather than hidden reasoning: every answer should include source evidence, confidence, missing information, and whether the claim is internal learning data or external reference material.
+
+## Local-First Operating Model
+
+Modeler should prefer completely local processing to reduce or eliminate operating costs and keep sensitive architecture knowledge under user control.
+
+Local by default:
+
+- LLM inference through Docker Desktop-provided local models or another local OpenAI-compatible endpoint.
+- RDF, Chroma, Postgres, Redis, SearXNG, API, portal, worker, and docs generation through Docker Compose.
+- Knowledge mining, triple extraction, documentation critique, and confidence scoring inside the local stack.
+- Seed data, organization knowledge, feedback, and generated documentation stored locally unless the user explicitly exports or publishes them.
+
+Cloud usage should be opt-in and adapter-based. If a cloud model, hosted search, external vector store, or managed database is used, the system should show the expected cost, data boundary, retention policy, and reason before sending data out.
+
+This matters because the product will eventually reason over sensitive people, process, value-stream, and organizational pain-point data. Local-first processing keeps experimentation cheap, auditable, and safer while still allowing higher-powered cloud services when a human chooses that tradeoff.
+
+## MVP Verification
+
+The MVP is expected to provide evidence before claims.
+
+```bash
+cd apps/api
+python -m pytest -v
+```
+
+```bash
+cd apps/portal
+pnpm test
+pnpm run build
+```
+
+```bash
+docker compose up --build
+```
+
+After the API starts:
+
+```bash
+curl http://localhost:8000/health
+curl "http://localhost:8000/views/milky-way?lens=value_stream"
+curl -X POST http://localhost:8000/questions \
+  -H "Content-Type: application/json" \
+  -d "{\"question\":\"Who reports to John?\"}"
+```
 
 ## Source of Truth Boundaries
 

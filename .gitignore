@@ -1,3 +1,9 @@
 .worktrees/
 .superpowers/
 _sdd/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+.pnpm-store/
+apps/portal/node_modules/
+apps/portal/dist/
