@@ -30,9 +30,11 @@ class Evidence(BaseModel):
         if source_type == "external":
             if eligibility == "learn_by_default":
                 raise ValueError("external evidence cannot be learn_by_default")
-            normalized.setdefault("learning_eligibility", "do_not_learn")
+            if eligibility is None:
+                normalized["learning_eligibility"] = "do_not_learn"
         elif source_type == "internal":
-            normalized.setdefault("learning_eligibility", "learn_by_default")
+            if eligibility is None:
+                normalized["learning_eligibility"] = "learn_by_default"
 
         return normalized
 

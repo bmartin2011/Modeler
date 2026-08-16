@@ -43,6 +43,22 @@ def test_evidence_defaults_learning_eligibility_by_source_type():
     assert external.learning_eligibility == "do_not_learn"
 
 
+def test_evidence_json_null_learning_eligibility_uses_source_type_default():
+    internal = Evidence.model_validate_json(
+        '{"id":"evidence.internal","label":"Internal document",'
+        '"source_type":"internal","source_ref":"internal.md",'
+        '"learning_eligibility":null}'
+    )
+    external = Evidence.model_validate_json(
+        '{"id":"evidence.external","label":"External document",'
+        '"source_type":"external","source_ref":"https://example.com",'
+        '"learning_eligibility":null}'
+    )
+
+    assert internal.learning_eligibility == "learn_by_default"
+    assert external.learning_eligibility == "do_not_learn"
+
+
 def test_external_evidence_cannot_be_learned_by_default():
     with pytest.raises(ValidationError):
         Evidence(
