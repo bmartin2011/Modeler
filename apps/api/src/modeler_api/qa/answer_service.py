@@ -39,19 +39,38 @@ class AnswerService:
                 confidence=Confidence(score=0.0, rationale="No reporting relationships were found."),
                 next_best_question="Which reporting relationship should be modeled for John?",
             )
+        target = self.repository.graph.get_entity(direct_reports[0].target_id)
+        report_names = [self.repository.graph.get_entity(rel.source_id).name for rel in direct_reports]
+        associated_name = (
+            self.repository.graph.get_entity(associated_people[0].source_id).name
+            if associated_people
+            else None
+        )
+        evidence_ids: list[str] = []
+        for relationship in [*direct_reports, *associated_people]:
+            for evidence_id in relationship.evidence_ids:
+                if evidence_id not in evidence_ids:
+                    evidence_ids.append(evidence_id)
+        report_summary = " and ".join(report_names)
+        unknown = (
+            [
+                f"{associated_name} is associated with {target.name}, but the reporting relationship is unresolved."
+            ]
+            if associated_name
+            else [f"No unresolved association with {target.name} is modeled."]
+        )
         return Answer(
             question=question,
             answer=(
-                "Maya and Luis are verified direct reports to John. Priya is associated "
-                "with John's delivery gate, but the reporting relationship is unresolved."
+                f"{report_summary} are verified direct reports to {target.name}. "
+                f"{associated_name} is associated with {target.name}'s delivery gate, but the "
+                "reporting relationship is unresolved."
+                if associated_name
+                else f"{report_summary} are verified direct reports to {target.name}."
             ),
-            known=["Maya reports to John.", "Luis reports to John."],
-            unknown=(
-                ["Priya is associated with John, but the reporting relationship is unresolved."]
-                if associated_people
-                else ["No unresolved association with John is modeled."]
-            ),
-            evidence_ids=["evidence.seed_org", "evidence.user_luis"],
+            known=[f"{name} reports to {target.name}." for name in report_names],
+            unknown=unknown,
+            evidence_ids=evidence_ids,
             confidence=Confidence(
                 score=0.86,
                 rationale="Two reporting relationships are verified and one adjacent relationship is unresolved.",
@@ -64,7 +83,7 @@ class AnswerService:
 
     def _approval_gate_concentration(self, question: str) -> Answer:
         gate_relationships = self.repository.find_relationships(
-            type="requires_gate", target_id="gate.ops_review"
+            type="requires_gate"
         )
         if not gate_relationships:
             return Answer(
@@ -76,15 +95,32 @@ class AnswerService:
                 confidence=Confidence(score=0.0, rationale="No approval-gate dependencies were found."),
                 next_best_question="Which value stream should be checked for approval gates?",
             )
+        gate_counts: dict[str, int] = {}
+        for relationship in gate_relationships:
+            gate_counts[relationship.target_id] = gate_counts.get(relationship.target_id, 0) + 1
+        gate_id = max(gate_counts, key=gate_counts.get)
+        concentrated_relationships = [
+            relationship for relationship in gate_relationships if relationship.target_id == gate_id
+        ]
+        gate_name = self.repository.graph.get_entity(gate_id).name
+        value_stream_names = [
+            self.repository.graph.get_entity(relationship.source_id).name
+            for relationship in concentrated_relationships
+        ]
+        evidence_ids: list[str] = []
+        for relationship in concentrated_relationships:
+            for evidence_id in relationship.evidence_ids:
+                if evidence_id not in evidence_ids:
+                    evidence_ids.append(evidence_id)
         return Answer(
             question=question,
             answer=(
-                "Operations Review Gate is a likely concentration point because multiple "
+                f"{gate_name} is a likely concentration point because multiple "
                 "value stream stages depend on it."
             ),
-            known=["Onboard Customer", "Deliver Service"],
+            known=value_stream_names,
             unknown=["Approval volume and average wait time are not modeled."],
-            evidence_ids=["evidence.seed_org"],
+            evidence_ids=evidence_ids,
             confidence=Confidence(
                 score=0.68,
                 rationale="Multiple modeled value streams require the same gate, but throughput is unknown.",

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from modeler_api.domain.repository import KnowledgeRepository
 from modeler_api.domain.seed_loader import load_seed_graph
+from modeler_api.domain.models import Confidence, Entity, KnowledgeGraph, Relationship
 from modeler_api.qa.answer_service import AnswerService
 
 
@@ -40,12 +41,79 @@ def test_answers_consult_repository_relationships():
     service.answer("Where are approval gates concentrated?")
 
     assert ("reports_to", "person.john") in repository.calls
-    assert ("requires_gate", "gate.ops_review") in repository.calls
+    assert ("requires_gate", None) in repository.calls
+
+
+def test_reporting_answer_uses_returned_entities_and_evidence():
+    john = Entity(id="person.john", type="person", name="Jordan", verification_state="verified")
+    report = Entity(id="person.report", type="person", name="Avery", verification_state="verified")
+    partner = Entity(id="person.partner", type="person", name="Casey", verification_state="unresolved")
+    graph = KnowledgeGraph(
+        organization_name="Other Co",
+        entities=[john, report, partner],
+        relationships=[
+            Relationship(
+                id="rel.report",
+                type="reports_to",
+                source_id=report.id,
+                target_id=john.id,
+                verification_state="verified",
+                confidence=Confidence(score=0.9, rationale="confirmed"),
+                evidence_ids=["evidence.report"],
+            ),
+            Relationship(
+                id="rel.partner",
+                type="associated_with",
+                source_id=partner.id,
+                target_id=john.id,
+                verification_state="unresolved",
+                confidence=Confidence(score=0.4, rationale="unclear"),
+                evidence_ids=["evidence.partner"],
+            ),
+        ],
+        evidence=[],
+    )
+
+    answer = AnswerService(KnowledgeRepository(graph)).answer("Who reports to John?")
+
+    assert "Avery" in answer.answer
+    assert "Maya" not in answer.answer
+    assert "Casey" in answer.unknown[0]
+    assert answer.evidence_ids == ["evidence.report", "evidence.partner"]
+
+
+def test_gate_answer_uses_returned_entities_and_evidence():
+    gate = Entity(id="gate.review", type="gate", name="Risk Council", verification_state="verified")
+    stage = Entity(id="vs.stage", type="value_stream", name="Launch Account", verification_state="verified")
+    graph = KnowledgeGraph(
+        organization_name="Other Co",
+        entities=[gate, stage],
+        relationships=[
+            Relationship(
+                id="rel.stage_gate",
+                type="requires_gate",
+                source_id=stage.id,
+                target_id=gate.id,
+                verification_state="verified",
+                confidence=Confidence(score=0.7, rationale="confirmed"),
+                evidence_ids=["evidence.risk"],
+            )
+        ],
+        evidence=[],
+    )
+
+    answer = AnswerService(KnowledgeRepository(graph)).answer("Where are approval gates concentrated?")
+
+    assert "Risk Council" in answer.answer
+    assert answer.known == ["Launch Account"]
+    assert "Operations Review Gate" not in answer.answer
+    assert answer.evidence_ids == ["evidence.risk"]
 
 
 class RecordingRepository:
     def __init__(self, repository: KnowledgeRepository) -> None:
         self.repository = repository
+        self.graph = repository.graph
         self.calls: list[tuple[str | None, str | None]] = []
 
     def find_relationships(
