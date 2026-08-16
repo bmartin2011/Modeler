@@ -533,12 +533,20 @@ pnpm run build
 docker compose up --build
 ```
 
-After the API starts:
+After Docker starts the stack, open the portal at:
+
+```text
+http://localhost:18173
+```
+
+The source file `apps/portal/index.html` is not the product entrypoint. The portal should be served by Docker, not opened directly with `file://`.
+
+After the API starts on the namespaced Modeler host port:
 
 ```bash
-curl http://localhost:8000/health
-curl "http://localhost:8000/views/milky-way?lens=value_stream"
-curl -X POST http://localhost:8000/questions \
+curl http://localhost:18100/health
+curl "http://localhost:18100/views/milky-way?lens=value_stream"
+curl -X POST http://localhost:18100/questions \
   -H "Content-Type: application/json" \
   -d "{\"question\":\"Who reports to John?\"}"
 ```
@@ -562,5 +570,6 @@ This separation matters because the product must explain why it believes somethi
 The initial design lives in:
 
 - [ArchiMate Visual Documentation Portal Design](docs/superpowers/specs/2026-08-16-archimate-visual-portal-design.md)
+- [Local Docker Isolated MVP Design](docs/superpowers/specs/2026-08-16-local-docker-isolated-mvp-design.md)
 
 The next step is to turn the approved design into an implementation plan.
