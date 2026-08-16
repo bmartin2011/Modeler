@@ -1,3 +1,5 @@
+name: modeler-mvp
+
 services:
   api:
     image: python:3.12-slim
@@ -5,8 +7,26 @@ services:
     volumes:
       - .:/workspace
     command: sh -c "pip install -e .[dev] && uvicorn modeler_api.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      API_PUBLIC_BASE_URL: http://localhost:18100
+      CHROMA_URL: http://chroma:8000
+      FUSEKI_URL: http://fuseki:3030
+      SEARXNG_URL: http://searxng:8080
+      POSTGRES_URL: postgresql://modeler:modeler@postgres:5432/modeler
+      REDIS_URL: redis://redis:6379/0
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-}
+      MODEL_NAME: ${MODEL_NAME:-}
+      CLOUD_ADAPTERS_ENABLED: "false"
     ports:
-      - "8000:8000"
+      - "18100:8000"
+    networks:
+      - modeler_internal
+    depends_on:
+      - chroma
+      - fuseki
+      - postgres
+      - redis
+      - searxng
 
   portal:
     image: node:22-slim
@@ -14,40 +34,60 @@ services:
     volumes:
       - .:/workspace
     command: sh -c "corepack enable && pnpm install && pnpm run dev --host 0.0.0.0"
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+      VITE_API_PUBLIC_BASE_URL: http://localhost:18100
     ports:
-      - "5173:5173"
+      - "18173:5173"
+    networks:
+      - modeler_internal
     depends_on:
       - api
 
   fuseki:
     image: stain/jena-fuseki:latest
-    ports:
-      - "3030:3030"
     environment:
-      ADMIN_PASSWORD: "modeler"
+      ADMIN_PASSWORD: modeler
+    volumes:
+      - modeler_fuseki_data:/fuseki
+    networks:
+      - modeler_internal
 
   chroma:
     image: chromadb/chroma:latest
-    ports:
-      - "8001:8000"
+    volumes:
+      - modeler_chroma_data:/chroma/chroma
+    networks:
+      - modeler_internal
 
   postgres:
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: modeler
       POSTGRES_PASSWORD: modeler
       POSTGRES_DB: modeler
+    volumes:
+      - modeler_postgres_data:/var/lib/postgresql/data
+    networks:
+      - modeler_internal
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - modeler_internal
 
   searxng:
     image: searxng/searxng:latest
-    ports:
-      - "8080:8080"
     volumes:
       - ./docker/searxng:/etc/searxng
+    networks:
+      - modeler_internal
+
+networks:
+  modeler_internal:
+    name: modeler_internal
+
+volumes:
+  modeler_chroma_data:
+  modeler_fuseki_data:
+  modeler_postgres_data:
