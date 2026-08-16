@@ -1,0 +1,44 @@
+{
+  "organization_name": "Acme Services",
+  "evidence": [
+    {
+      "id": "evidence.seed_org",
+      "label": "Seed organization model",
+      "source_type": "seed",
+      "source_ref": "data/seed/acme.json",
+      "learning_eligibility": "learn_by_default"
+    },
+    {
+      "id": "evidence.user_luis",
+      "label": "User correction: Luis reports to John",
+      "source_type": "conversation",
+      "source_ref": "planning conversation",
+      "learning_eligibility": "learn_by_default"
+    }
+  ],
+  "entities": [
+    {"id": "org.acme", "type": "organization", "name": "Acme Services", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "person.john", "type": "person", "name": "John", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "person.maya", "type": "person", "name": "Maya", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "person.luis", "type": "person", "name": "Luis", "verification_state": "verified", "evidence_ids": ["evidence.user_luis"]},
+    {"id": "person.priya", "type": "person", "name": "Priya", "verification_state": "unresolved", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "person.ren", "type": "person", "name": "Ren", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "vs.discover", "type": "value_stream", "name": "Discover Opportunity", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "vs.onboard", "type": "value_stream", "name": "Onboard Customer", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "vs.deliver", "type": "value_stream", "name": "Deliver Service", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "cap.customer_intake", "type": "capability", "name": "Customer Intake", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "cap.service_delivery", "type": "capability", "name": "Service Delivery", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "system.crm", "type": "system", "name": "CRM", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "system.portal", "type": "system", "name": "Customer Portal", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "gate.ops_review", "type": "gate", "name": "Operations Review Gate", "verification_state": "verified", "evidence_ids": ["evidence.seed_org"]},
+    {"id": "pain.approval_concentration", "type": "pain_point", "name": "Approval Gate Concentration", "verification_state": "inferred", "evidence_ids": ["evidence.seed_org"]}
+  ],
+  "relationships": [
+    {"id": "rel.maya_reports_john", "type": "reports_to", "source_id": "person.maya", "target_id": "person.john", "verification_state": "verified", "confidence": {"score": 0.95, "rationale": "Seed organization model marks Maya as a direct report."}, "evidence_ids": ["evidence.seed_org"]},
+    {"id": "rel.luis_reports_john", "type": "reports_to", "source_id": "person.luis", "target_id": "person.john", "verification_state": "verified", "confidence": {"score": 0.92, "rationale": "User correction confirms Luis reports to John."}, "evidence_ids": ["evidence.user_luis"]},
+    {"id": "rel.priya_associated_john", "type": "associated_with", "source_id": "person.priya", "target_id": "person.john", "verification_state": "unresolved", "confidence": {"score": 0.42, "rationale": "Priya is connected to delivery work but the reporting line is unknown."}, "evidence_ids": ["evidence.seed_org"]},
+    {"id": "rel.onboard_uses_gate", "type": "requires_gate", "source_id": "vs.onboard", "target_id": "gate.ops_review", "verification_state": "verified", "confidence": {"score": 0.83, "rationale": "Seed value stream model requires operations review."}, "evidence_ids": ["evidence.seed_org"]},
+    {"id": "rel.deliver_uses_gate", "type": "requires_gate", "source_id": "vs.deliver", "target_id": "gate.ops_review", "verification_state": "verified", "confidence": {"score": 0.83, "rationale": "Seed value stream model requires operations review."}, "evidence_ids": ["evidence.seed_org"]},
+    {"id": "rel.gate_indicates_pain", "type": "indicates", "source_id": "gate.ops_review", "target_id": "pain.approval_concentration", "verification_state": "inferred", "confidence": {"score": 0.68, "rationale": "Multiple value streams depend on the same approval gate."}, "evidence_ids": ["evidence.seed_org"]}
+  ]
+}
