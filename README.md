@@ -514,6 +514,23 @@ Cloud usage should be opt-in and adapter-based. If a cloud model, hosted search,
 
 This matters because the product will eventually reason over sensitive people, process, value-stream, and organizational pain-point data. Local-first processing keeps experimentation cheap, auditable, and safer while still allowing higher-powered cloud services when a human chooses that tradeoff.
 
+## Isolated Docker Runtime
+
+Modeler should run as its own local Docker application stack. It should not borrow another project's Chroma, SearXNG, Redis, Postgres, network, or host ports unless a human explicitly connects those resources.
+
+The Compose stack uses:
+
+```text
+Compose project: modeler-mvp
+Network:         modeler_internal
+Portal:          http://localhost:18173
+API:             http://localhost:18100
+```
+
+Inside Docker, services communicate by service name on the private `modeler_internal` network. For example, the portal proxies API calls to `http://api:8000`, and the API reaches Chroma at `http://chroma:8000`.
+
+The source file `apps/portal/index.html` is not the product entrypoint. Start Docker and open `http://localhost:18173`.
+
 ## MVP Verification
 
 The MVP is expected to provide evidence before claims.
@@ -533,22 +550,21 @@ pnpm run build
 docker compose up --build
 ```
 
-After Docker starts the stack, open the portal at:
-
-```text
-http://localhost:18173
-```
-
-The source file `apps/portal/index.html` is not the product entrypoint. The portal should be served by Docker, not opened directly with `file://`.
-
-After the API starts on the namespaced Modeler host port:
+In another terminal:
 
 ```bash
+docker compose ps
 curl http://localhost:18100/health
 curl "http://localhost:18100/views/milky-way?lens=value_stream"
 curl -X POST http://localhost:18100/questions \
   -H "Content-Type: application/json" \
   -d "{\"question\":\"Who reports to John?\"}"
+```
+
+Open the portal:
+
+```text
+http://localhost:18173
 ```
 
 ## Source of Truth Boundaries
