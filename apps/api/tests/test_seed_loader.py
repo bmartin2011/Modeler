@@ -12,6 +12,19 @@ from modeler_api.domain.models import (
     Relationship,
     TrustBoundary,
 )
+from modeler_api.domain.repository import KnowledgeRepository
+from modeler_api.domain.seed_loader import load_seed_graph
+
+
+def test_seed_loader_returns_repository_ready_graph():
+    graph = load_seed_graph(Path("../../data/seed/acme.json"))
+    repo = KnowledgeRepository(graph)
+
+    people = repo.find_entities_by_type("person")
+    reports_to_john = repo.find_relationships(type="reports_to", target_id="person.john")
+
+    assert {person.name for person in people} >= {"John", "Maya", "Luis", "Priya"}
+    assert {rel.source_id for rel in reports_to_john} == {"person.maya", "person.luis"}
 
 
 def test_seed_graph_contains_fake_org_and_uncertainty():
