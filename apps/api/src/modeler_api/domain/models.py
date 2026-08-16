@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 VerificationState = Literal["verified", "inferred", "unresolved", "conflicting"]
+ReviewState = Literal["candidate", "accepted", "rejected", "superseded", "external_reference"]
 SourceType = Literal["internal", "external", "seed", "research", "conversation"]
 LearningEligibility = Literal["learn_by_default", "do_not_learn", "approved_for_promotion"]
 
@@ -47,17 +48,21 @@ class Confidence(BaseModel):
 class Entity(BaseModel):
     id: str
     type: str
+    archimate_type: str | None = None
     name: str
     verification_state: VerificationState
+    review_state: ReviewState = "accepted"
     evidence_ids: list[str] = Field(default_factory=list)
 
 
 class Relationship(BaseModel):
     id: str
     type: str
+    archimate_relationship: str | None = None
     source_id: str
     target_id: str
     verification_state: VerificationState
+    review_state: ReviewState = "accepted"
     confidence: Confidence
     evidence_ids: list[str] = Field(min_length=1)
 
