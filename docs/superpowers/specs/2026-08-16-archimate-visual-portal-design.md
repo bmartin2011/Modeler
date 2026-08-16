@@ -246,6 +246,24 @@ Documentation critique should grade:
 
 Human thumbs up/down, corrections, and requests for better evidence should become learning signals. Automated documentation updates should be blocked or flagged when they reduce clarity, coverage, traceability, evidence quality, or usefulness relative to the existing documentation baseline.
 
+The documentation layer must distinguish internal documentation from external documents.
+
+Internal documentation is learning-eligible by default because the team can correct it. This includes product documentation, design specs, generated codebase docs, implementation notes, code comments, architecture decisions, and generated Sphinx pages. These sources may be mined, critiqued, corrected, graded, and used to improve future documentation behavior.
+
+External documents are quality-controlled inputs or outputs, not automatic learning material. This includes customer documents, vendor references, third-party standards, regulatory guidance, uploaded files, and published deliverables. They may be used to answer the current question, generate high-quality output, cite evidence, or extract task-scoped facts, but they should not become reusable learning data, playbook evidence, or organization knowledge unless a human explicitly approves promotion.
+
+Each document-derived claim should carry:
+
+- Source type: internal or external.
+- Learning eligibility: learn by default, do not learn, or approved for promotion.
+- Permission state: retain, cite, transform, publish, or task-only.
+- Confidentiality state.
+- Provenance and access timestamp.
+- Citation target, such as page, section, paragraph, or source URL.
+- Promotion history.
+
+External document quality checks should be stricter than internal documentation checks. They should include source integrity, audience fit, citation quality, confidentiality handling, freshness, ambiguity, and whether the system is respecting the document's learning eligibility.
+
 ## Technical Stack
 
 The primary delivery unit is a local Docker Compose prototype.

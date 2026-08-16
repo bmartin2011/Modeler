@@ -407,6 +407,58 @@ Quality checks should include:
 
 Future documentation updates should meet or exceed the existing product-documentation bar. If an automated update lowers clarity, evidence, coverage, or usefulness, the critique layer should block or flag it before it is presented as trustworthy.
 
+## Documentation Trust Boundary
+
+Modeler should handle internal and external documents differently.
+
+Internal documentation is learning material. Product docs, design specs, code comments, generated Sphinx pages, implementation notes, and architecture decisions can be mined, critiqued, corrected, and used to improve future documentation behavior because the team can inspect and repair them.
+
+External documents are quality-controlled inputs or outputs, not automatic learning material. Customer documents, third-party standards, vendor references, regulatory guidance, uploaded files, and published deliverables should be processed with stricter trust and permission rules.
+
+```text
+Internal Document
+Purpose: Learn and improve
+Allowed: Mine, critique, correct, score, and feed back into the learning loop
+Example: Product README, design spec, generated codebase docs
+
+External Document
+Purpose: Understand, transform, summarize, cite, or publish with high quality
+Allowed: Extract auditable facts and confidence-scored claims for the task
+Not Allowed: Use for model learning, playbook promotion, or future training unless a human explicitly approves
+Example: Customer process manual, regulatory PDF, vendor architecture guide
+```
+
+Both document types can produce entity triples and evidence-backed claims, but each claim should carry a learning eligibility flag.
+
+```text
+Document Claim
+Entity: Customer Onboarding Policy
+Predicate: requires
+Object: Operations Review Gate
+
+Source Type
+External customer document
+
+Learning Eligibility
+Do not learn by default
+
+Use Allowed
+Use for this analysis, cite as evidence, include in generated deliverable if permitted
+
+Promotion Rule
+Human approval required before this claim can become reusable organization knowledge or playbook evidence.
+```
+
+External document handling should emphasize:
+
+- Permission: whether the document may be retained, cited, transformed, or used beyond the current task.
+- Provenance: where the document came from and when it was accessed.
+- Audience: whether the output is internal, customer-facing, regulatory, executive, or technical.
+- Confidentiality: whether extracted facts should be redacted, isolated, or excluded from learning.
+- Citation: whether claims must point back to source sections, pages, or passages.
+- Freshness: whether the source may be stale or superseded.
+- Promotion: whether a human has approved any extracted fact for reusable knowledge.
+
 ## Technology Direction
 
 The prototype should run locally with Docker Compose.
