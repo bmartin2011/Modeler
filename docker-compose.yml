@@ -18,7 +18,13 @@ services:
       MODEL_NAME: ${MODEL_NAME:-}
       CLOUD_ADAPTERS_ENABLED: "false"
     ports:
-      - "18100:8000"
+      - "127.0.0.1:18100:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     networks:
       - modeler_internal
     depends_on:
@@ -40,11 +46,12 @@ services:
       VITE_API_PROXY_TARGET: http://api:8000
       VITE_API_PUBLIC_BASE_URL: http://localhost:18100
     ports:
-      - "18173:5173"
+      - "127.0.0.1:18173:5173"
     networks:
       - modeler_internal
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   fuseki:
     image: stain/jena-fuseki:latest

@@ -529,6 +529,10 @@ API:             http://localhost:18100
 
 Inside Docker, services communicate by service name on the private `modeler_internal` network. For example, the portal proxies API calls to `http://api:8000`, and the API reaches Chroma at `http://chroma:8000`.
 
+### Optional Model Configuration
+
+Set `MODEL_BASE_URL` to a local OpenAI-compatible model endpoint and `MODEL_NAME` to the model served by that endpoint before starting Compose. Both variables are passed through to the API container and default to empty when unset.
+
 The source file `apps/portal/index.html` is not the product entrypoint. Start Docker and open `http://localhost:18173`.
 
 ## MVP Verification
