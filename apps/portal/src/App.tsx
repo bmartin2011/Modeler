@@ -66,7 +66,25 @@ export default function App() {
           </button>
         </section>
       ) : projection ? (
-        <MilkyWayMap projection={projection} />
+        <>
+          {projection.context?.industry && projection.context?.journey ? (
+            <section className="context-controls" aria-label="Model context">
+              <label>
+                Industry
+                <select value={projection.context.industry.selected} disabled>
+                  {projection.context.industry.available.map((industry: string) => <option key={industry}>{industry}</option>)}
+                </select>
+              </label>
+              <label>
+                Journey
+                <select value={projection.context.journey.selected} disabled>
+                  {projection.context.journey.available.map((journey: string) => <option key={journey}>{journey}</option>)}
+                </select>
+              </label>
+            </section>
+          ) : null}
+          <MilkyWayMap projection={projection} showContext={false} />
+        </>
       ) : (
         <p>Loading Milky Way...</p>
       )}
