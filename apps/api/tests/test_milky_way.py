@@ -112,6 +112,7 @@ def test_process_context_includes_relevant_unresolved_relationship_state():
             "entity_id": "app.customer_portal",
             "relationship_id": "rel.onboard_portal_unresolved",
             "relationship": "uses",
+            "question": "Is Onboard Customer supported by Customer Portal?",
             "evidence_ids": ["evidence.seed_org", "evidence.seed_process_web"],
             "verification_state": "unresolved",
             "review_state": "candidate",
@@ -119,6 +120,24 @@ def test_process_context_includes_relevant_unresolved_relationship_state():
             "entity_review_state": "accepted",
         }
     ]
+
+
+def test_unresolved_relationship_questions_describe_the_actual_relationship():
+    projection = build_milky_way_projection(_repo(), "organization")
+
+    assert "What is Priya's relationship to John?" in {
+        item["question"] for item in projection["unresolved"] if item["entity_id"] == "person.priya"
+    }
+
+
+def test_value_stream_lens_handles_missing_industry_and_journey_overlays():
+    graph = load_seed_graph(Path("../../data/seed/acme.json"))
+    graph.entities = [entity for entity in graph.entities if entity.type not in {"industry", "journey"}]
+
+    projection = build_milky_way_projection(KnowledgeRepository(graph), "value_stream")
+
+    assert projection["context"] == {}
+    assert projection["lanes"] == []
 
 
 def test_organization_lens_still_projects_reporting_and_unresolved_branches():

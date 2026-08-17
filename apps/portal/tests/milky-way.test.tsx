@@ -88,6 +88,40 @@ const projectionWithSecondProcess = {
   }
 };
 
+const organizationProjection = {
+  lens: "organization",
+  context: {},
+  archimate_legend: [{ type: "Business Actor", description: "An organizational entity." }],
+  lanes: [],
+  nodes: [
+    {
+      id: "person.john",
+      name: "John",
+      type: "person",
+      archimate_type: "Business Actor",
+      verification_state: "verified",
+      review_state: "accepted",
+      evidence_ids: ["evidence.seed_org"],
+      confidence: null as never
+    },
+    {
+      id: "person.maya",
+      name: "Maya",
+      type: "person",
+      archimate_type: "Business Actor",
+      verification_state: "verified",
+      review_state: "accepted",
+      evidence_ids: ["evidence.seed_org"],
+      confidence: null as never
+    }
+  ],
+  edges: [{ id: "rel.maya_reports_john", relationship: "reports_to", source_id: "person.maya", target_id: "person.john" }],
+  process_contexts: {},
+  overlays: [],
+  unresolved: [],
+  collapsible_branches: [{ entity_id: "person.john", state: "collapsible", summary: "John has 1 verified direct report and 0 unresolved associated relationships." }]
+};
+
 describe("MilkyWayMap", () => {
   afterEach(() => {
     cleanup();
@@ -127,5 +161,44 @@ describe("MilkyWayMap", () => {
     expect(screen.getByText("Customer Portal")).toBeInTheDocument();
     expect(screen.queryByText("Sales Lead")).not.toBeInTheDocument();
     expect(screen.queryByText("CRM")).not.toBeInTheDocument();
+  });
+
+  it("renders organization payload nodes, relationships, and branches without lanes", () => {
+    render(<MilkyWayMap projection={organizationProjection} />);
+
+    expect(screen.getByText("John")).toBeInTheDocument();
+    expect(screen.getByText("Maya")).toBeInTheDocument();
+    expect(screen.getByText("Maya reports to John")).toBeInTheDocument();
+    expect(screen.getByText(/John has 1 verified direct report/)).toBeInTheDocument();
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Confidence unavailable/).length).toBeGreaterThan(0);
+  });
+
+  it("renders relationship-aware unresolved process items in the inspector", () => {
+    const unresolvedProcessProjection = {
+      ...projection,
+      process_contexts: {
+        ...projection.process_contexts,
+        "process.qualify_opportunity": {
+          ...projection.process_contexts["process.qualify_opportunity"],
+          unresolved: [{
+            entity_id: "app.crm",
+            relationship_id: "rel.qualify_crm_unresolved",
+            relationship: "uses",
+            question: "Is Qualify Opportunity supported by CRM?",
+            evidence_ids: ["evidence.seed_process_web"],
+            verification_state: "unresolved",
+            review_state: "candidate",
+            entity_verification_state: "verified",
+            entity_review_state: "accepted"
+          }]
+        }
+      }
+    };
+
+    render(<MilkyWayMap projection={unresolvedProcessProjection} />);
+
+    expect(screen.getByText("What remains unresolved for this process?")).toBeInTheDocument();
+    expect(screen.getByText("Is Qualify Opportunity supported by CRM?")).toBeInTheDocument();
   });
 });

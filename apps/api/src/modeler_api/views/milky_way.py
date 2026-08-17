@@ -92,7 +92,7 @@ def _process_context(repository: KnowledgeRepository, process_id: str) -> dict:
         "pain_points": _entity_list(context["pain_points"]),
         "evidence_ids": evidence_ids,
         "confidence": _combined_confidence(relationships),
-        "unresolved": _context_unresolved_items(context),
+        "unresolved": _context_unresolved_items(repository, context),
     }
 
 
@@ -117,6 +117,25 @@ def _assessment_overlays(repository: KnowledgeRepository) -> list[dict]:
     ]
 
 
+def _relationship_question(source: Entity, relationship: Relationship, target: Entity) -> str:
+    questions = {
+        "associated_with": f"What is {source.name}'s relationship to {target.name}?",
+        "assigned_to": f"Is {source.name} assigned to {target.name}?",
+        "performs": f"Does {source.name} perform {target.name}?",
+        "uses": f"Is {source.name} supported by {target.name}?",
+        "reads": f"Does {source.name} read {target.name}?",
+        "creates": f"Does {source.name} create {target.name}?",
+        "updates": f"Does {source.name} update {target.name}?",
+        "deletes": f"Does {source.name} delete {target.name}?",
+        "realizes": f"Does {source.name} realize {target.name}?",
+        "supports": f"Does {source.name} support {target.name}?",
+        "requires_gate": f"Does {source.name} require {target.name}?",
+        "affects": f"Does {source.name} affect {target.name}?",
+        "reports_to": f"Does {source.name} report to {target.name}?",
+    }
+    return questions.get(relationship.type, f"What is the {relationship.type} relationship between {source.name} and {target.name}?")
+
+
 def _unresolved_items(repository: KnowledgeRepository) -> list[dict]:
     items = [
         {
@@ -134,18 +153,21 @@ def _unresolved_items(repository: KnowledgeRepository) -> list[dict]:
         items.append(
             {
                 "entity_id": source.id,
-                "question": f"Should {source.name} be modeled as reporting to {target.name}?",
+                "question": _relationship_question(source, relationship, target),
             }
         )
     return items
 
 
-def _context_unresolved_items(context: dict[str, list[tuple[Relationship, Entity]]]) -> list[dict]:
+def _context_unresolved_items(repository: KnowledgeRepository, context: dict[str, list[tuple[Relationship, Entity]]]) -> list[dict]:
     return [
         {
             "entity_id": entity.id,
             "relationship_id": relationship.id,
             "relationship": relationship.type,
+            "question": _relationship_question(
+                repository.get_entity(relationship.source_id), relationship, repository.get_entity(relationship.target_id)
+            ),
             "evidence_ids": sorted(set(entity.evidence_ids) | set(relationship.evidence_ids)),
             "verification_state": relationship.verification_state,
             "review_state": relationship.review_state,
@@ -163,12 +185,16 @@ def _value_stream_projection(repository: KnowledgeRepository) -> dict:
     process_contexts = {entity.id: _process_context(repository, entity.id) for entity in process_entities}
     industries = repository.find_entities_by_type("industry")
     journeys = repository.find_entities_by_type("journey")
-    selected_journey = journeys[0]
-    stage_relationships = [
-        relationship
-        for relationship, entity in repository.related_to(selected_journey.id, "supports")
-        if entity.type == "journey_stage"
-    ]
+    selected_journey = journeys[0] if journeys else None
+    stage_relationships = (
+        [
+            relationship
+            for relationship, entity in repository.related_to(selected_journey.id, "supports")
+            if entity.type == "journey_stage"
+        ]
+        if selected_journey
+        else []
+    )
     stage_ids = [relationship.source_id for relationship in stage_relationships]
     node_ids = {
         entity.id
@@ -184,8 +210,8 @@ def _value_stream_projection(repository: KnowledgeRepository) -> dict:
     return {
         "lens": "value_stream",
         "context": {
-            "industry": {"selected": industries[0].name, "available": [entity.name for entity in industries]},
-            "journey": {"selected": selected_journey.name, "available": [entity.name for entity in journeys]},
+            **({"industry": {"selected": industries[0].name, "available": [entity.name for entity in industries]}} if industries else {}),
+            **({"journey": {"selected": selected_journey.name, "available": [entity.name for entity in journeys]}} if selected_journey else {}),
         },
         "archimate_legend": _archimate_legend(repository),
         "lanes": [

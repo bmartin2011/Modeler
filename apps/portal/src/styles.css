@@ -97,6 +97,54 @@ main {
   background: #f7f8fb;
 }
 
+.organization-graph {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-top: 3px solid #4a779e;
+  background: #f7f8fb;
+}
+
+.organization-nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.organization-node {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+.organization-node span,
+.organization-node small {
+  color: #526277;
+}
+
+.organization-edges,
+.collapsible-branches {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.organization-edges li {
+  padding: 8px 10px;
+  border-left: 3px solid #4a779e;
+  background: #ffffff;
+}
+
+.collapsible-branches li {
+  padding: 8px 10px;
+  border-left: 3px solid #b26a00;
+  background: #fff7e8;
+}
+
 .galaxy-lane h3,
 .relationship-inspector h3,
 .relationship-inspector h4 {
