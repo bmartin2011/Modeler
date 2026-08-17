@@ -26,3 +26,24 @@
 
 - The API suite retains the existing Starlette `TestClient` deprecation warning for `httpx`; this fix wave does not alter dependency configuration.
 - `docs/references/archimate.pdf` remains untracked and untouched.
+
+## Final Fix Round 2
+
+### Files Changed
+
+- `apps/portal/src/components/MilkyWayMap.tsx`
+- `apps/portal/tests/milky-way.test.tsx`
+
+### Commit
+
+- `fix: handle omitted map confidence`
+
+### Tests
+
+- `pnpm test -- milky-way.test.tsx` - 9 passed.
+- `pnpm test` - 9 passed.
+- `pnpm run build` - passed.
+
+### Concerns
+
+- None. `docs/references/archimate.pdf` remains untracked and untouched.

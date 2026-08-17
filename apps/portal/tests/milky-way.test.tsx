@@ -49,7 +49,7 @@ const projection = {
     }
   },
   overlays: [],
-  unresolved: [{ entity_id: "person.priya", question: "Should Priya be modeled as reporting to John?" }],
+  unresolved: [{ entity_id: "person.priya", question: "What is Priya's relationship to John?" }],
   collapsible_branches: []
 };
 
@@ -113,6 +113,15 @@ const organizationProjection = {
       review_state: "accepted",
       evidence_ids: ["evidence.seed_org"],
       confidence: null as never
+    },
+    {
+      id: "person.ren",
+      name: "Ren",
+      type: "person",
+      archimate_type: "Business Actor",
+      verification_state: "verified",
+      review_state: "accepted",
+      evidence_ids: ["evidence.seed_org"]
     }
   ],
   edges: [{ id: "rel.maya_reports_john", relationship: "reports_to", source_id: "person.maya", target_id: "person.john" }],
@@ -148,7 +157,7 @@ describe("MilkyWayMap", () => {
     expect(screen.getByText("Opportunity Record")).toBeInTheDocument();
     expect(screen.getByText("Deletes")).toBeInTheDocument();
     expect(screen.getByText("Stale Lead")).toBeInTheDocument();
-    expect(screen.getByText("Should Priya be modeled as reporting to John?")).toBeInTheDocument();
+    expect(screen.getByText("What is Priya's relationship to John?")).toBeInTheDocument();
   });
 
   it("replaces the default inspector relationships when a second process is selected", () => {
@@ -171,7 +180,8 @@ describe("MilkyWayMap", () => {
     expect(screen.getByText("Maya reports to John")).toBeInTheDocument();
     expect(screen.getByText(/John has 1 verified direct report/)).toBeInTheDocument();
     expect(screen.queryByText("0%")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Confidence unavailable/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/NaN%/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Confidence unavailable/).length).toBeGreaterThan(1);
   });
 
   it("renders relationship-aware unresolved process items in the inspector", () => {

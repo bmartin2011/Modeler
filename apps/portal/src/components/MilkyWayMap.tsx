@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 type ContextOption = { selected: string; available: string[] };
 type ModelContext = { industry?: ContextOption; journey?: ContextOption };
 type GraphEntity = { id: string; name: string; archimate_type: string };
-type GraphNode = GraphEntity & { type: string; verification_state: string; review_state: string; evidence_ids: string[]; confidence: number | null };
+type GraphNode = GraphEntity & { type: string; verification_state: string; review_state: string; evidence_ids: string[]; confidence?: number | null };
 type ProcessContext = {
   performed_by: GraphEntity[];
   applications: GraphEntity[];
@@ -38,8 +38,8 @@ function DataOperation({ label, entities }: { label: string; entities: GraphEnti
   return <div className="data-operation"><h5>{label}</h5><EntityList entities={entities} emptyLabel="None" /></div>;
 }
 
-function confidenceLabel(confidence: number | null) {
-  return confidence === null ? "Confidence unavailable" : `${Math.round(confidence * 100)}%`;
+function confidenceLabel(confidence?: number | null) {
+  return confidence == null ? "Confidence unavailable" : `${Math.round(confidence * 100)}%`;
 }
 
 export function MilkyWayMap({ projection, showContext = true }: { projection: Projection; showContext?: boolean }) {
