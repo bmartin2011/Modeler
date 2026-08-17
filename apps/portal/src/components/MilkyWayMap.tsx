@@ -33,6 +33,10 @@ function EntityList({ entities, emptyLabel = "Not modeled" }: { entities: GraphE
   return entities.length ? <ul className="relationship-list">{entities.map((entity) => <li key={entity.id}><span>{entity.name}</span><small>{entity.archimate_type}</small></li>)}</ul> : <p className="empty-relationship">{emptyLabel}</p>;
 }
 
+function DataOperation({ label, entities }: { label: string; entities: GraphEntity[] }) {
+  return <div className="data-operation"><h5>{label}</h5><EntityList entities={entities} emptyLabel="None" /></div>;
+}
+
 export function MilkyWayMap({ projection, showContext = true }: { projection: Projection; showContext?: boolean }) {
   const nodes = projection.nodes ?? [];
   const lanes = projection.lanes ?? [];
@@ -42,7 +46,6 @@ export function MilkyWayMap({ projection, showContext = true }: { projection: Pr
   const [selectedProcessId, setSelectedProcessId] = useState<string>();
   const selectedProcess = processNodes.find((node) => node.id === selectedProcessId) ?? processNodes[0];
   const selectedContext = selectedProcess ? processContexts[selectedProcess.id] : undefined;
-  const dataEntities = selectedContext ? [...selectedContext.data.reads, ...selectedContext.data.creates, ...selectedContext.data.updates, ...selectedContext.data.deletes] : [];
   const supportEntities = selectedContext ? [...selectedContext.capabilities, ...selectedContext.value_streams] : [];
 
   return <section className="milky-way" aria-label={`${projection.lens} Milky Way map`}>
@@ -72,7 +75,7 @@ export function MilkyWayMap({ projection, showContext = true }: { projection: Pr
         <header><h3>{selectedProcess.name}</h3></header>
         <section><h4>Who does this process?</h4><EntityList entities={selectedContext.performed_by} /></section>
         <section><h4>What application supports it?</h4><EntityList entities={selectedContext.applications} /></section>
-        <section><h4>What data is used, created, or modified?</h4><EntityList entities={dataEntities} /></section>
+        <section><h4>What data is used, created, or modified?</h4><div className="data-operations"><DataOperation label="Reads" entities={selectedContext.data.reads} /><DataOperation label="Creates" entities={selectedContext.data.creates} /><DataOperation label="Updates" entities={selectedContext.data.updates} /><DataOperation label="Deletes" entities={selectedContext.data.deletes} /></div></section>
         <section><h4>What capability or value stream does it support?</h4><EntityList entities={supportEntities} /></section>
         {selectedContext.gates.length || selectedContext.pain_points.length ? <section><h4>Gates and pain points</h4><EntityList entities={[...selectedContext.gates, ...selectedContext.pain_points]} /></section> : null}
         <section><h4>Evidence and confidence</h4><p>{Math.round(selectedContext.confidence.score * 100)}% confidence</p><p>{selectedContext.confidence.rationale}</p><p className="evidence-list">Evidence: {selectedContext.evidence_ids.join(", ") || "Not modeled"}</p></section>

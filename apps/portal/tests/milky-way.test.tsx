@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { MilkyWayMap } from "../src/components/MilkyWayMap";
 
 const projection = {
@@ -37,8 +37,8 @@ const projection = {
       data: {
         reads: [{ id: "data.lead_profile", name: "Lead Profile", archimate_type: "Data Object" }],
         creates: [{ id: "data.qualified_opportunity", name: "Qualified Opportunity", archimate_type: "Data Object" }],
-        updates: [],
-        deletes: []
+        updates: [{ id: "data.opportunity_record", name: "Opportunity Record", archimate_type: "Data Object" }],
+        deletes: [{ id: "data.stale_lead", name: "Stale Lead", archimate_type: "Data Object" }]
       },
       capabilities: [{ id: "cap.opportunity_management", name: "Opportunity Management", archimate_type: "Capability" }],
       value_streams: [{ id: "stage.buy", name: "Buy", archimate_type: "Value Stream" }],
@@ -53,7 +53,46 @@ const projection = {
   collapsible_branches: []
 };
 
+const projectionWithSecondProcess = {
+  ...projection,
+  lanes: [{
+    ...projection.lanes[0],
+    node_ids: ["process.qualify_opportunity", "process.onboard_customer"]
+  }],
+  nodes: [
+    ...projection.nodes,
+    {
+      id: "process.onboard_customer",
+      name: "Onboard Customer",
+      type: "process",
+      archimate_type: "Business Process",
+      verification_state: "verified",
+      review_state: "accepted",
+      evidence_ids: ["evidence.onboarding"],
+      confidence: 0.91
+    }
+  ],
+  process_contexts: {
+    ...projection.process_contexts,
+    "process.onboard_customer": {
+      performed_by: [{ id: "role.onboarding_specialist", name: "Onboarding Specialist", archimate_type: "Business Role" }],
+      applications: [{ id: "app.customer_portal", name: "Customer Portal", archimate_type: "Application Component" }],
+      data: { reads: [], creates: [], updates: [], deletes: [] },
+      capabilities: [{ id: "cap.customer_onboarding", name: "Customer Onboarding", archimate_type: "Capability" }],
+      value_streams: [{ id: "stage.buy", name: "Buy", archimate_type: "Value Stream" }],
+      gates: [],
+      pain_points: [],
+      evidence_ids: ["evidence.onboarding"],
+      confidence: { score: 0.91, rationale: "Verified onboarding relationships." }
+    }
+  }
+};
+
 describe("MilkyWayMap", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders graph-derived ArchiMate Galaxy context", () => {
     render(<MilkyWayMap projection={projection} />);
 
@@ -67,8 +106,26 @@ describe("MilkyWayMap", () => {
     expect(screen.getByText("What application supports it?")).toBeInTheDocument();
     expect(screen.getByText("CRM")).toBeInTheDocument();
     expect(screen.getByText("What data is used, created, or modified?")).toBeInTheDocument();
+    expect(screen.getByText("Reads")).toBeInTheDocument();
     expect(screen.getByText("Lead Profile")).toBeInTheDocument();
+    expect(screen.getByText("Creates")).toBeInTheDocument();
     expect(screen.getByText("Qualified Opportunity")).toBeInTheDocument();
+    expect(screen.getByText("Updates")).toBeInTheDocument();
+    expect(screen.getByText("Opportunity Record")).toBeInTheDocument();
+    expect(screen.getByText("Deletes")).toBeInTheDocument();
+    expect(screen.getByText("Stale Lead")).toBeInTheDocument();
     expect(screen.getByText("Should Priya be modeled as reporting to John?")).toBeInTheDocument();
+  });
+
+  it("replaces the default inspector relationships when a second process is selected", () => {
+    render(<MilkyWayMap projection={projectionWithSecondProcess} />);
+
+    expect(screen.getByText("Sales Lead")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Onboard Customer/ }));
+
+    expect(screen.getByText("Onboarding Specialist")).toBeInTheDocument();
+    expect(screen.getByText("Customer Portal")).toBeInTheDocument();
+    expect(screen.queryByText("Sales Lead")).not.toBeInTheDocument();
+    expect(screen.queryByText("CRM")).not.toBeInTheDocument();
   });
 });

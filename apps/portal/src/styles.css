@@ -156,6 +156,23 @@ main {
   gap: 8px;
 }
 
+.data-operations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.data-operation {
+  min-width: 0;
+}
+
+.data-operation h5 {
+  margin: 0;
+  color: #224368;
+  font-size: 0.78rem;
+}
+
 .empty-relationship,
 .evidence-list {
   margin: 8px 0 0;
@@ -237,5 +254,9 @@ button {
 
   .context-controls label {
     flex: 1 1 180px;
+  }
+
+  .data-operations {
+    grid-template-columns: 1fr;
   }
 }
