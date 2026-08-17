@@ -184,6 +184,15 @@ describe("MilkyWayMap", () => {
     expect(screen.getAllByText(/Confidence unavailable/).length).toBeGreaterThan(1);
   });
 
+  it("renders unavailable confidence for the Ren node when confidence is omitted", () => {
+    render(<MilkyWayMap projection={organizationProjection} />);
+
+    const renNode = screen.getByText("Ren").closest(".organization-node");
+
+    expect(renNode).toHaveTextContent("Confidence unavailable");
+    expect(renNode).not.toHaveTextContent(/(?:NaN|0)%/);
+  });
+
   it("renders relationship-aware unresolved process items in the inspector", () => {
     const unresolvedProcessProjection = {
       ...projection,

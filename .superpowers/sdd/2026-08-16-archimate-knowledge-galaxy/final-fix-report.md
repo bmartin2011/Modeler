@@ -47,3 +47,23 @@
 ### Concerns
 
 - None. `docs/references/archimate.pdf` remains untracked and untouched.
+
+## Final Fix Round 3
+
+### Files Changed
+
+- `apps/portal/tests/milky-way.test.tsx`
+
+### Commit
+
+- `test: isolate omitted map confidence coverage`
+
+### Tests
+
+- `pnpm test -- milky-way.test.tsx` - 10 passed.
+- `pnpm test` - 10 passed.
+- `pnpm run build` - passed.
+
+### Concerns
+
+- None. `docs/references/archimate.pdf` remains untracked and untouched.
