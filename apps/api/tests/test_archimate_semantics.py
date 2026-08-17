@@ -148,3 +148,18 @@ def test_each_seed_process_has_core_relationship_context():
         ), process_id
         assert context["capabilities"], process_id
         assert context["value_streams"], process_id
+
+
+def test_qualify_opportunity_creates_qualified_opportunity_data():
+    repo = _repo()
+
+    context = repo.process_context("process.qualify_opportunity")
+    creates_relationship, created_entity = context["creates"][0]
+
+    assert creates_relationship.archimate_relationship == "access"
+    assert creates_relationship.verification_state == "inferred"
+    assert creates_relationship.review_state == "candidate"
+    assert creates_relationship.confidence.score == 0.72
+    assert creates_relationship.evidence_ids == ["evidence.seed_process_web"]
+    assert created_entity.id == "data.qualified_opportunity"
+    assert created_entity.name == "Qualified Opportunity"
