@@ -92,6 +92,7 @@ def _process_context(repository: KnowledgeRepository, process_id: str) -> dict:
         "pain_points": _entity_list(context["pain_points"]),
         "evidence_ids": evidence_ids,
         "confidence": _combined_confidence(relationships),
+        "unresolved": _context_unresolved_items(context),
     }
 
 
@@ -139,28 +140,52 @@ def _unresolved_items(repository: KnowledgeRepository) -> list[dict]:
     return items
 
 
+def _context_unresolved_items(context: dict[str, list[tuple[Relationship, Entity]]]) -> list[dict]:
+    return [
+        {
+            "entity_id": entity.id,
+            "relationship_id": relationship.id,
+            "relationship": relationship.type,
+            "evidence_ids": sorted(set(entity.evidence_ids) | set(relationship.evidence_ids)),
+            "verification_state": relationship.verification_state,
+            "review_state": relationship.review_state,
+            "entity_verification_state": entity.verification_state,
+            "entity_review_state": entity.review_state,
+        }
+        for pairs in context.values()
+        for relationship, entity in pairs
+        if relationship.verification_state == "unresolved" or entity.verification_state == "unresolved"
+    ]
+
+
 def _value_stream_projection(repository: KnowledgeRepository) -> dict:
-    stage_ids = ["stage.learn", "stage.buy", "stage.get", "stage.use", "stage.pay", "stage.support"]
     process_entities = repository.find_entities_by_type("process")
     process_contexts = {entity.id: _process_context(repository, entity.id) for entity in process_entities}
+    industries = repository.find_entities_by_type("industry")
+    journeys = repository.find_entities_by_type("journey")
+    selected_journey = journeys[0]
+    stage_relationships = [
+        relationship
+        for relationship, entity in repository.related_to(selected_journey.id, "supports")
+        if entity.type == "journey_stage"
+    ]
+    stage_ids = [relationship.source_id for relationship in stage_relationships]
     node_ids = {
         entity.id
         for entity in repository.graph.entities
-        if entity.type in {"journey_stage", "process", "role", "person", "application", "data_object", "capability", "gate", "pain_point"}
+        if entity.type in {"process", "role", "person", "application", "data_object", "capability", "gate", "pain_point"}
+        or entity.id in stage_ids
     }
     relationships = [
         relationship
         for relationship in repository.graph.relationships
         if relationship.source_id in node_ids and relationship.target_id in node_ids
     ]
-    industries = repository.find_entities_by_type("industry")
-    journeys = repository.find_entities_by_type("journey")
-
     return {
         "lens": "value_stream",
         "context": {
             "industry": {"selected": industries[0].name, "available": [entity.name for entity in industries]},
-            "journey": {"selected": journeys[0].name, "available": [entity.name for entity in journeys]},
+            "journey": {"selected": selected_journey.name, "available": [entity.name for entity in journeys]},
         },
         "archimate_legend": _archimate_legend(repository),
         "lanes": [
@@ -207,11 +232,12 @@ def _organization_projection(repository: KnowledgeRepository) -> dict:
             if relationship.verification_state == "unresolved"
         ]
         if reports or unresolved:
+            unresolved_label = "unresolved associated relationship" if len(unresolved) == 1 else "unresolved associated relationships"
             branches.append(
                 {
                     "entity_id": person.id,
                     "state": "partially_collapsible" if unresolved else "collapsible",
-                    "summary": f"{person.name} has {len(reports)} verified direct reports and {len(unresolved)} unresolved associated role.",
+                    "summary": f"{person.name} has {len(reports)} verified direct reports and {len(unresolved)} {unresolved_label}.",
                 }
             )
 
