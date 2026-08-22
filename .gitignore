@@ -7,3 +7,4 @@ __pycache__/
 .pnpm-store/
 apps/portal/node_modules/
 apps/portal/dist/
+data/runtime/

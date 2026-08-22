@@ -1,10 +1,13 @@
-from modeler_api.domain.models import Answer, Confidence
+from modeler_api.domain.models import Answer, Confidence, LearningTrace
 from modeler_api.domain.repository import KnowledgeRepository
 
 
 class AnswerService:
-    def __init__(self, repository: KnowledgeRepository) -> None:
+    def __init__(
+        self, repository: KnowledgeRepository, accepted_corrections: list[LearningTrace] | None = None
+    ) -> None:
         self.repository = repository
+        self.accepted_corrections = accepted_corrections or []
 
     def answer(self, question: str) -> Answer:
         normalized = question.strip().lower()
@@ -52,29 +55,40 @@ class AnswerService:
                 if evidence_id not in evidence_ids:
                     evidence_ids.append(evidence_id)
         report_summary = " and ".join(report_names)
+        known = [f"{name} reports to {target.name}." for name in report_names]
+        accepted_correction_known = [
+            trace.comment for trace in self.accepted_corrections if trace.comment not in known
+        ]
+        known.extend(accepted_correction_known)
+        unresolved_association_overridden = any(
+            associated_name and associated_name.lower() in correction.lower()
+            for correction in accepted_correction_known
+        )
         unknown = (
             [
                 f"{associated_name} is associated with {target.name}, but the reporting relationship is unresolved."
             ]
-            if associated_name
+            if associated_name and not unresolved_association_overridden
             else [f"No unresolved association with {target.name} is modeled."]
         )
         next_best_question = (
             f"Should {associated_name} be modeled as reporting to {target.name}, partnering with "
             f"{target.name}, or owning a separate delivery function?"
-            if associated_name
+            if associated_name and not unresolved_association_overridden
             else f"Which reporting relationship should be modeled for {target.name}?"
         )
+        if unresolved_association_overridden:
+            next_best_question = None
         return Answer(
             question=question,
             answer=(
                 f"{report_summary} are verified direct reports to {target.name}. "
                 f"{associated_name} is associated with {target.name}, but the "
                 "reporting relationship is unresolved."
-                if associated_name
+                if associated_name and not unresolved_association_overridden
                 else f"{report_summary} are verified direct reports to {target.name}."
             ),
-            known=[f"{name} reports to {target.name}." for name in report_names],
+            known=known,
             unknown=unknown,
             evidence_ids=evidence_ids,
             confidence=Confidence(
@@ -82,6 +96,7 @@ class AnswerService:
                 rationale="Two reporting relationships are verified and one adjacent relationship is unresolved.",
             ),
             next_best_question=next_best_question,
+            learning_trace=self.accepted_corrections,
         )
 
     def _approval_gate_concentration(self, question: str) -> Answer:

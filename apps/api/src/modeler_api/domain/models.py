@@ -9,6 +9,7 @@ VerificationState = Literal["verified", "inferred", "unresolved", "conflicting"]
 ReviewState = Literal["candidate", "accepted", "rejected", "superseded", "external_reference"]
 SourceType = Literal["internal", "external", "seed", "research", "conversation"]
 LearningEligibility = Literal["learn_by_default", "do_not_learn", "approved_for_promotion"]
+FeedbackReviewState = Literal["pending", "accepted", "rejected"]
 
 
 class Evidence(BaseModel):
@@ -43,6 +44,13 @@ class Evidence(BaseModel):
 class Confidence(BaseModel):
     score: float = Field(ge=0.0, le=1.0)
     rationale: str
+
+
+class LearningTrace(BaseModel):
+    feedback_id: str
+    target_id: str
+    comment: str
+    review_state: Literal["accepted"]
 
 
 class Entity(BaseModel):
@@ -92,6 +100,7 @@ class Answer(BaseModel):
     evidence_ids: list[str]
     confidence: Confidence
     next_best_question: str | None = None
+    learning_trace: list[LearningTrace] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def require_evidence_for_supported_answers(self) -> "Answer":
@@ -106,6 +115,7 @@ class FeedbackEvent(BaseModel):
     rating: Literal["thumbs_up", "thumbs_down", "correction", "deviation"]
     comment: str
     creates_learning_signal: bool
+    review_state: FeedbackReviewState = "pending"
 
 
 class KnowledgeGraph(BaseModel):

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
 
@@ -42,6 +42,7 @@ const projection = {
 
 describe("App", () => {
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
   });
 
@@ -50,6 +51,10 @@ describe("App", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => projection
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [] })
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -75,6 +80,10 @@ describe("App", () => {
       .mockRejectedValueOnce(new Error("API unavailable"))
       .mockResolvedValueOnce({
         ok: true,
+        json: async () => ({ items: [] })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
         json: async () => projection
       } as Response);
 
@@ -84,5 +93,160 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(await screen.findByText("Generic Services")).toBeInTheDocument();
+  });
+
+  it("sends a simple question and renders the API answer", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => projection
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [] })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          question: "Where are approval gates concentrated?",
+          answer: "Operations Review Gate is a likely concentration point.",
+          known: ["Onboard Customer", "Deliver Service"],
+          unknown: ["Approval volume and average wait time are not modeled."],
+          evidence_ids: ["evidence.seed_org"],
+          confidence: { score: 0.68, rationale: "Multiple modeled value streams require the same gate." },
+          next_best_question: "How often does this gate block work for more than one business day?"
+        })
+      } as Response);
+
+    render(<App />);
+
+    await screen.findByText("Generic Services");
+    fireEvent.change(screen.getByLabelText("Ask a model question"), {
+      target: { value: "Where are approval gates concentrated?" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+    expect(await screen.findByText("Operations Review Gate is a likely concentration point.")).toBeInTheDocument();
+    expect(screen.getByText("68% confidence")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: "Where are approval gates concentrated?" })
+    });
+  });
+
+  it("records a correction against the current answer", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => projection
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [] })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: "feedback.1",
+          target_id: "answer.Who_reports_to_John",
+          rating: "correction",
+          comment: "Priya owns delivery but does not report to John.",
+          creates_learning_signal: true,
+          review_state: "pending"
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [{
+            id: "feedback.1",
+            target_id: "answer.Who_reports_to_John",
+            rating: "correction",
+            comment: "Priya owns delivery but does not report to John.",
+            creates_learning_signal: true,
+            review_state: "pending"
+          }]
+        })
+      } as Response);
+
+    render(<App />);
+
+    await screen.findByText("Generic Services");
+    fireEvent.click(screen.getByRole("button", { name: "thumbs down" }));
+    fireEvent.change(screen.getByLabelText("Correction"), {
+      target: { value: "Priya owns delivery but does not report to John." }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Record correction" }));
+
+    expect(await screen.findByText("Learning signal captured")).toBeInTheDocument();
+    expect(await screen.findByText("Priya owns delivery but does not report to John.")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target_id: "answer.Who_reports_to_John",
+        rating: "correction",
+        comment: "Priya owns delivery but does not report to John."
+      })
+    });
+    expect(fetch).toHaveBeenCalledWith("/api/review-queue");
+  });
+
+  it("accepts a correction from the review queue", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => projection
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [{
+            id: "feedback.1",
+            target_id: "answer.Who_reports_to_John",
+            rating: "correction",
+            comment: "Priya owns delivery but does not report to John.",
+            creates_learning_signal: true,
+            review_state: "pending"
+          }]
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: "feedback.1",
+          target_id: "answer.Who_reports_to_John",
+          rating: "correction",
+          comment: "Priya owns delivery but does not report to John.",
+          creates_learning_signal: true,
+          review_state: "accepted"
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [{
+            id: "feedback.1",
+            target_id: "answer.Who_reports_to_John",
+            rating: "correction",
+            comment: "Priya owns delivery but does not report to John.",
+            creates_learning_signal: true,
+            review_state: "accepted"
+          }]
+        })
+      } as Response);
+
+    render(<App />);
+
+    await screen.findByText("Priya owns delivery but does not report to John.");
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+
+    expect(await screen.findByText("accepted")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/review-queue/feedback.1/decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ review_state: "accepted" })
+    });
   });
 });

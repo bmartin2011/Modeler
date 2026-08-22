@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { getMilkyWay } from "./api/client";
+import {
+  askQuestion,
+  decideReviewQueueItem,
+  getMilkyWay,
+  getReviewQueue,
+  previewReviewQueueItem,
+  recordFeedback,
+  ReviewQueueItem
+} from "./api/client";
 import { ArtifactCards } from "./components/ArtifactCards";
 import { FeedbackControls } from "./components/FeedbackControls";
 import { MilkyWayMap } from "./components/MilkyWayMap";
@@ -7,8 +15,13 @@ import { QuestionPanel } from "./components/QuestionPanel";
 
 type Lens = "value_stream" | "organization";
 type Projection = Awaited<ReturnType<typeof getMilkyWay>>;
+type Answer = Awaited<ReturnType<typeof askQuestion>>;
 
-const answer = {
+function answerTargetId(question: string) {
+  return `answer.${question.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "")}`;
+}
+
+const initialAnswer = {
   question: "Who reports to John?",
   answer: "Maya and Luis are verified direct reports. Priya is unresolved.",
   known: ["Maya reports to John.", "Luis reports to John."],
@@ -21,8 +34,11 @@ const answer = {
 export default function App() {
   const [lens, setLens] = useState<Lens>("value_stream");
   const [projection, setProjection] = useState<Projection>();
+  const [answer, setAnswer] = useState<Answer>(initialAnswer);
+  const [reviewQueueItems, setReviewQueueItems] = useState<ReviewQueueItem[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
+  const [reviewQueueVersion, setReviewQueueVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -46,6 +62,26 @@ export default function App() {
       active = false;
     };
   }, [lens, requestVersion]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getReviewQueue()
+      .then((queue) => {
+        if (active) {
+          setReviewQueueItems(queue.items);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setReviewQueueItems([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [reviewQueueVersion]);
 
   return (
     <main>
@@ -88,9 +124,28 @@ export default function App() {
       ) : (
         <p>Loading Milky Way...</p>
       )}
-      <QuestionPanel answer={answer} />
-      <FeedbackControls />
-      <ArtifactCards />
+      <QuestionPanel
+        answer={answer}
+        onAskQuestion={async (question) => {
+          setAnswer(await askQuestion(question));
+        }}
+      />
+      <FeedbackControls
+        targetId={answerTargetId(answer.question)}
+        onRecordFeedback={async (payload) => {
+          const event = await recordFeedback(payload);
+          setReviewQueueVersion((version) => version + 1);
+          return event;
+        }}
+      />
+      <ArtifactCards
+        reviewQueueItems={reviewQueueItems}
+        onDecideReviewItem={async (feedbackId, reviewState) => {
+          await decideReviewQueueItem(feedbackId, reviewState);
+          setReviewQueueVersion((version) => version + 1);
+        }}
+        onPreviewReviewItem={previewReviewQueueItem}
+      />
     </main>
   );
 }
