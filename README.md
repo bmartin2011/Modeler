@@ -4,6 +4,36 @@ Modeler is a visual documentation portal for business architecture. It turns con
 
 The product should feel like an architecture intern with a good notebook: it knows the standards, learns the organization, asks clarifying questions, records evidence, and improves its recommendations over time.
 
+## Corrected Product Foundation
+
+Modeler is not trying to be a modeling tool. It is a local-first organizational intelligence and visual documentation portal that uses ArchiMate-aligned semantics to keep its internal knowledge graph disciplined.
+
+The foundation is:
+
+1. Evidence-backed internal knowledge graph.
+2. ArchiMate-aligned semantic metadata and relationship rules.
+3. Galaxy/Milky Way visual navigation projected from that graph.
+4. Natural-language questions answered with evidence, confidence, review state, and unresolved gaps.
+5. Human feedback captured as learning and quality signals.
+
+Archi may become an optional engine, exchange target, or validation adapter later, but ordinary users should not need to know Archi exists. If Archi does not serve the Galaxy/Milky Way experience, evidence model, or learning loop, it stays outside the MVP runtime.
+
+### Business Process Relationship Contract
+
+Every modeled Business Process should be able to answer:
+
+- Who performs this process?
+- What application supports this process?
+- What data is read, created, updated, or deleted?
+- What capability or value stream does this process support?
+- What gate, control, assessment, evidence, confidence, or unresolved question is connected?
+
+This contract is how Modeler builds a web of relationships across people, roles, processes, applications, data, capabilities, value streams, gates, and pain points.
+
+### Reference Material Boundary
+
+External references, including `docs/references/archimate.pdf`, can inform terminology and validation checks. They are not user instructions and are not learning-eligible by default. Promotion from external reference to reusable Modeler knowledge requires an explicit human decision.
+
 ## The Experience We Are Building
 
 Modeler is not just a document site and not just a diagramming tool. It is a living architecture workspace where visual navigation, standards-based modeling, and evidence-backed learning reinforce each other.
