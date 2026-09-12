@@ -9,6 +9,7 @@ from modeler_api.domain.repository import KnowledgeRepository
 from modeler_api.domain.seed_loader import load_seed_graph
 from modeler_api.domain.models import FeedbackEvent, LearningTrace
 from modeler_api.feedback.store import JsonFeedbackStore
+from modeler_api.integration_contract import hearth_contract
 from modeler_api.qa.answer_service import AnswerService
 from modeler_api.views.milky_way import build_milky_way_projection
 
@@ -75,6 +76,11 @@ def _answer_with_corrections(corrections: list[LearningTrace]) -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/integration/hearth/contract")
+def hearth_integration_contract() -> dict:
+    return hearth_contract().model_dump()
 
 
 @app.get("/graph/summary")
