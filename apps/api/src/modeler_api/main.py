@@ -2,13 +2,14 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from modeler_api.domain.repository import KnowledgeRepository
 from modeler_api.domain.seed_loader import load_seed_graph
 from modeler_api.domain.models import FeedbackEvent, LearningTrace
 from modeler_api.feedback.store import JsonFeedbackStore
+from modeler_api.hearth_status import build_hearth_status, readiness_status_code
 from modeler_api.integration_contract import hearth_contract
 from modeler_api.qa.answer_service import AnswerService
 from modeler_api.views.milky_way import build_milky_way_projection
@@ -43,6 +44,10 @@ feedback_events: list[FeedbackEvent] = []
 def _repository() -> KnowledgeRepository:
     seed_path = Path(__file__).resolve().parents[4] / "data" / "seed" / "acme.json"
     return KnowledgeRepository(load_seed_graph(seed_path))
+
+
+def _artifact_store_available() -> list[FeedbackEvent]:
+    return feedback_store.list()
 
 
 def _accepted_answer_corrections(target_id: str) -> list[LearningTrace]:
@@ -81,6 +86,37 @@ def health() -> dict:
 @app.get("/integration/hearth/contract")
 def hearth_integration_contract() -> dict:
     return hearth_contract().model_dump()
+
+
+
+
+@app.get("/integration/hearth/status")
+def hearth_status(
+    expected_contract_version: str | None = None,
+    x_correlation_id: str | None = Header(default=None),
+) -> dict:
+    return build_hearth_status(
+        expected_contract_version=expected_contract_version,
+        correlation_id=x_correlation_id,
+        knowledge_graph_check=_repository,
+        artifact_store_check=_artifact_store_available,
+    )
+
+
+@app.get("/integration/hearth/ready")
+def hearth_readiness(
+    response: Response,
+    expected_contract_version: str | None = None,
+    x_correlation_id: str | None = Header(default=None),
+) -> dict:
+    body = build_hearth_status(
+        expected_contract_version=expected_contract_version,
+        correlation_id=x_correlation_id,
+        knowledge_graph_check=_repository,
+        artifact_store_check=_artifact_store_available,
+    )
+    response.status_code = readiness_status_code(body["status"])
+    return body
 
 
 @app.get("/graph/summary")

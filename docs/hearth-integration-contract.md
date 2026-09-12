@@ -38,7 +38,7 @@ Hearth should configure a trusted local Modeler endpoint.
 | `MODELER_BASE_URL` | yes | `http://localhost:18100` | Trusted local Modeler API endpoint. |
 | `MODELER_CONTRACT_VERSION` | yes | `2026-09-12.hearth.v1` | Contract version Hearth expects. |
 | `MODEL_BASE_URL` | no | unset | Optional local OpenAI-compatible model endpoint. |
-| `MODEL_NAME` | no | unset | Optional local model name. |
+| `MODEL_NAME` | no | unset | Optional model name. |
 
 Modeler should not require public cloud services for normal Hearth operation.
 
@@ -46,7 +46,7 @@ Modeler should not require public cloud services for normal Hearth operation.
 
 The initial safe action set is intentionally narrow:
 
-- `status.read`: read local Modeler status.
+- `status.read`: read local Modeler status from `GET /integration/hearth/status`.
 - `question.answer`: answer an approved architecture question with evidence and uncertainty.
 - `view.milky_way`: retrieve a local Milky Way graph projection.
 - `mapping.candidate`: submit approved context for candidate ArchiMate mapping without automatic promotion.
@@ -95,6 +95,29 @@ Every Hearth-facing response should include the metadata needed to keep Modeler 
 | `trust_boundary` | outputs from supplied or external context | Preserves learning eligibility, confidentiality, and permission state. |
 | `advisory_only` | all Hearth-facing responses | Confirms Modeler cannot authorize consequential actions. |
 | `missing_information` | incomplete answers or visualizations | Keeps uncertainty visible. |
+
+## Hearth Status And Readiness
+
+Modeler exposes three local availability surfaces:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Simple liveness check for generic infrastructure. |
+| `GET /integration/hearth/status` | Hearth-facing status payload that always returns a structured body when Modeler can answer. |
+| `GET /integration/hearth/ready` | Readiness check using the same payload with HTTP status codes for startup probes. |
+
+The Hearth status payload includes `contract_version`, `advisory_only`, optional `correlation_id`, requested contract metadata, dependency state, runtime configuration source, and `missing_information`.
+
+Status values are:
+
+| Status | Meaning |
+| --- | --- |
+| `healthy` | Required dependencies are available and the requested contract version is supported. |
+| `degraded` | Modeler can answer, but optional or partial configuration is unhealthy. |
+| `unsupported_version` | Hearth requested a contract version different from the Modeler contract. |
+| `unavailable` | A required local dependency is unavailable. |
+
+Readiness returns `200` for `healthy` or `degraded`, `426` for `unsupported_version`, and `503` for `unavailable`. Degraded Modeler state should not imply Hearth must fail startup; Hearth should surface the degraded detail and continue according to its own policy.
 
 ## Forbidden Context
 
