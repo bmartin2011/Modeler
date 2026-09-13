@@ -1,0 +1,115 @@
+name: modeler-hearth
+
+x-modeler-hearth-service-contract:
+  service: modeler-hearth-api
+  build_context: .
+  default_image: python:3.12-slim
+  local_api_port: 18100
+  internal_container_port: 8000
+  healthcheck_endpoint: /integration/hearth/status
+  local_only: true
+  optional: true
+  missing_config_behavior: degraded
+
+services:
+  modeler-hearth-api:
+    profiles:
+      - hearth
+    image: ${MODELER_HEARTH_IMAGE:-python:3.12-slim}
+    working_dir: /workspace/apps/api
+    command: sh -c "pip install -e . && uvicorn modeler_api.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      API_PUBLIC_BASE_URL: http://localhost:${MODELER_HEARTH_HOST_PORT:-18100}
+      CHROMA_URL: http://modeler-hearth-chroma:8000
+      FUSEKI_URL: http://modeler-hearth-fuseki:3030
+      SEARXNG_URL: http://modeler-hearth-searxng:8080
+      POSTGRES_URL: postgresql://modeler:modeler@modeler-hearth-postgres:5432/modeler
+      REDIS_URL: redis://modeler-hearth-redis:6379/0
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-}
+      MODEL_NAME: ${MODEL_NAME:-}
+      MODELER_CONTRACT_VERSION: ${MODELER_CONTRACT_VERSION:-2026-09-12.hearth.v1}
+      MODELER_HEARTH_ENABLED: ${MODELER_HEARTH_ENABLED:-true}
+      MODELER_HEARTH_OPTIONAL: "true"
+      MODELER_HEARTH_MISSING_CONFIG_STATUS: degraded
+      CLOUD_ADAPTERS_ENABLED: "false"
+    volumes:
+      - .:/workspace
+      - modeler_hearth_artifacts:/workspace/data/runtime/hearth/artifacts
+      - modeler_hearth_state:/workspace/data/runtime/hearth/state
+    ports:
+      - "${MODELER_HEARTH_BIND_HOST:-127.0.0.1}:${MODELER_HEARTH_HOST_PORT:-18100}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/integration/hearth/status').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    networks:
+      - modeler_hearth_local
+    depends_on:
+      - modeler-hearth-chroma
+      - modeler-hearth-fuseki
+      - modeler-hearth-postgres
+      - modeler-hearth-redis
+      - modeler-hearth-searxng
+
+  modeler-hearth-fuseki:
+    profiles:
+      - hearth
+    image: stain/jena-fuseki:latest
+    environment:
+      ADMIN_PASSWORD: modeler
+    volumes:
+      - modeler_hearth_fuseki_data:/fuseki
+    networks:
+      - modeler_hearth_local
+
+  modeler-hearth-chroma:
+    profiles:
+      - hearth
+    image: chromadb/chroma:latest
+    volumes:
+      - modeler_hearth_chroma_data:/chroma/chroma
+    networks:
+      - modeler_hearth_local
+
+  modeler-hearth-postgres:
+    profiles:
+      - hearth
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: modeler
+      POSTGRES_PASSWORD: modeler
+      POSTGRES_DB: modeler
+    volumes:
+      - modeler_hearth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - modeler_hearth_local
+
+  modeler-hearth-redis:
+    profiles:
+      - hearth
+    image: redis:7-alpine
+    networks:
+      - modeler_hearth_local
+
+  modeler-hearth-searxng:
+    profiles:
+      - hearth
+    image: searxng/searxng:latest
+    volumes:
+      - ./docker/searxng:/etc/searxng:ro
+    networks:
+      - modeler_hearth_local
+
+networks:
+  modeler_hearth_local:
+    name: modeler_hearth_local
+    internal: true
+
+volumes:
+  modeler_hearth_artifacts:
+  modeler_hearth_state:
+  modeler_hearth_chroma_data:
+  modeler_hearth_fuseki_data:
+  modeler_hearth_postgres_data:
