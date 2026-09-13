@@ -124,6 +124,39 @@ A rejected request returns `422` with a structured `detail.error` of `bounded_re
 
 `mapping.candidate` and `docs.critique` currently return a bounded, clearly-labeled placeholder response (unpromoted candidate, or a quality-checklist) because their underlying extraction and critique engines are not yet implemented; the request is still validated, bounded, and auditable.
 
+## Artifact Metadata And Lifecycle
+
+A `view.milky_way` request (see above) creates an artifact record. Artifact metadata:
+
+| Field | Purpose |
+| --- | --- |
+| `id` | Stable artifact identifier. |
+| `type` | Currently only `view.milky_way`. |
+| `name`, `summary` | Human-readable description. |
+| `size_bytes` | Serialized payload size. |
+| `created_at` | ISO 8601 timestamp. |
+| `source_request_id`, `correlation_id` | Ties the artifact back to the originating Hearth request. |
+| `provenance` | Source material behind the artifact (for example `knowledge_graph`). |
+| `render_safety` | `safe_json`, `metadata_only`, or `unsafe`. |
+| `removed`, `removed_at`, `removed_reason` | Soft-deletion state; metadata is retained for audit even after removal. |
+| `content_hash`, `warning` | Optional. |
+
+Lifecycle endpoints:
+
+```http
+GET /integration/hearth/artifacts
+GET /integration/hearth/artifacts/{artifact_id}
+DELETE /integration/hearth/artifacts/{artifact_id}
+```
+
+- `GET /integration/hearth/artifacts` returns metadata only (no `payload`) for every artifact, removed or not.
+- `GET /integration/hearth/artifacts/{artifact_id}` returns full metadata, plus `payload` only when the artifact is not removed and `render_safety == safe_json`. Otherwise the response includes `metadata_only_reason` (`artifact_removed`, or `render_safety_<value>`) and withholds the payload. Unknown IDs return `404`.
+- `DELETE /integration/hearth/artifacts/{artifact_id}` accepts an optional `{"reason": "..."}` body, marks the artifact removed, clears its payload, and returns the updated metadata. Unknown IDs return `404`. Removal never deletes the metadata row, so audit history survives.
+
+Artifacts larger than `max_artifact_bytes_renderable` are created as `metadata_only` from the start rather than being rejected outright, per the contract's `oversized_artifact_behavior`.
+
+`mapping.candidate` and `docs.critique` request results are not persisted as artifacts; they remain inline advisory responses, since neither has a real content-generation engine yet.
+
 ## Hearth Status And Readiness
 
 Modeler exposes three local availability surfaces:

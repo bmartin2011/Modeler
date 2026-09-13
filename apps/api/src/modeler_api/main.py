@@ -1,10 +1,13 @@
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel
 
+from modeler_api.artifacts.service import artifact_detail, artifact_metadata
+from modeler_api.artifacts.store import JsonArtifactStore
 from modeler_api.domain.repository import KnowledgeRepository
 from modeler_api.domain.seed_loader import load_seed_graph
 from modeler_api.domain.models import FeedbackEvent, LearningTrace
@@ -36,6 +39,10 @@ class ReviewDecisionRequest(BaseModel):
     review_state: Literal["accepted", "rejected"]
 
 
+class ArtifactRemovalRequest(BaseModel):
+    reason: str | None = None
+
+
 app = FastAPI(title="Modeler API")
 feedback_store = JsonFeedbackStore(
     Path(
@@ -46,6 +53,14 @@ feedback_store = JsonFeedbackStore(
     )
 )
 feedback_events: list[FeedbackEvent] = []
+artifact_store = JsonArtifactStore(
+    Path(
+        os.environ.get(
+            "MODELER_ARTIFACT_STORE_PATH",
+            Path(__file__).resolve().parents[4] / "data" / "runtime" / "artifacts.json",
+        )
+    )
+)
 
 
 def _repository() -> KnowledgeRepository:
@@ -136,6 +151,7 @@ def hearth_request_submission(
             envelope,
             header_correlation_id=x_correlation_id,
             repository_factory=_repository,
+            artifact_store=artifact_store,
         )
     except UnsupportedRequestTypeError as exc:
         raise HTTPException(
@@ -154,6 +170,31 @@ def hearth_request_submission(
                 "violations": exc.violations,
             },
         ) from exc
+
+
+@app.get("/integration/hearth/artifacts")
+def list_hearth_artifacts() -> dict:
+    return {"items": [artifact_metadata(artifact) for artifact in artifact_store.list()]}
+
+
+@app.get("/integration/hearth/artifacts/{artifact_id}")
+def get_hearth_artifact(artifact_id: str) -> dict:
+    artifact = artifact_store.get(artifact_id)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    return artifact_detail(artifact)
+
+
+@app.delete("/integration/hearth/artifacts/{artifact_id}")
+def remove_hearth_artifact(artifact_id: str, request: ArtifactRemovalRequest) -> dict:
+    artifact = artifact_store.remove(
+        artifact_id, reason=request.reason, removed_at=datetime.now(UTC).isoformat()
+    )
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    return artifact_metadata(artifact)
 
 
 @app.get("/graph/summary")
