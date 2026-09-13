@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from modeler_api.artifacts.service import create_artifact
+from modeler_api.artifacts.store import JsonArtifactStore
 from modeler_api.docs_quality.service import CRITIQUE_CHECKS_BY_SOURCE_TYPE
 from modeler_api.domain.repository import KnowledgeRepository
 from modeler_api.integration_contract import CONTRACT_VERSION
@@ -120,15 +122,19 @@ def handle_hearth_request(
     *,
     header_correlation_id: str | None,
     repository_factory: RepositoryFactory,
+    artifact_store: JsonArtifactStore,
 ) -> dict:
     correlation_id = envelope.correlation_id or header_correlation_id or _generate_correlation_id()
+    request_id = _generate_request_id()
 
     _validate_bounds(envelope)
 
     if envelope.request_type == "question.answer":
         result = _handle_question_answer(envelope.payload, repository_factory)
     elif envelope.request_type == "view.milky_way":
-        result = _handle_view_milky_way(envelope.payload, repository_factory)
+        result = _handle_view_milky_way(
+            envelope.payload, repository_factory, artifact_store, correlation_id, request_id
+        )
     elif envelope.request_type == "mapping.candidate":
         result = _handle_mapping_candidate(envelope.payload)
     elif envelope.request_type == "docs.critique":
@@ -151,9 +157,26 @@ def _handle_question_answer(payload: dict, repository_factory: RepositoryFactory
     return answer.model_dump()
 
 
-def _handle_view_milky_way(payload: dict, repository_factory: RepositoryFactory) -> dict:
+def _handle_view_milky_way(
+    payload: dict,
+    repository_factory: RepositoryFactory,
+    artifact_store: JsonArtifactStore,
+    correlation_id: str,
+    request_id: str,
+) -> dict:
     lens = payload.get("lens", "value_stream")
-    return build_milky_way_projection(repository_factory(), lens)
+    projection = build_milky_way_projection(repository_factory(), lens)
+    artifact = create_artifact(
+        artifact_store,
+        type="view.milky_way",
+        name=f"Milky Way projection ({lens})",
+        summary=f"Milky Way graph projection using the {lens} lens.",
+        payload=projection,
+        source_request_id=request_id,
+        correlation_id=correlation_id,
+        provenance=["knowledge_graph"],
+    )
+    return {**projection, "artifact_id": artifact.id}
 
 
 def _handle_mapping_candidate(payload: dict) -> dict:
@@ -179,3 +202,7 @@ def _handle_docs_critique(payload: dict) -> dict:
 
 def _generate_correlation_id() -> str:
     return f"modeler-req.{uuid.uuid4()}"
+
+
+def _generate_request_id() -> str:
+    return f"modeler-request.{uuid.uuid4()}"

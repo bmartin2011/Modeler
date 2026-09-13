@@ -58,6 +58,17 @@ def test_hearth_contract_marks_mapping_and_critique_actions_available_via_reques
     assert critique_action.status == "available"
     assert critique_action.endpoint == "/integration/hearth/requests"
 
+
+def test_hearth_contract_marks_artifact_read_and_remove_actions_available():
+    contract = hearth_contract()
+    read_action = next(action for action in contract.safe_actions if action.id == "artifact.read")
+    remove_action = next(action for action in contract.safe_actions if action.id == "artifact.remove")
+
+    assert read_action.status == "available"
+    assert read_action.endpoint == "/integration/hearth/artifacts"
+    assert remove_action.status == "available"
+    assert remove_action.endpoint == "/integration/hearth/artifacts"
+
 def test_hearth_contract_pins_response_metadata_requirements():
     contract = hearth_contract()
     metadata_fields = {requirement.field for requirement in contract.response_metadata_requirements}

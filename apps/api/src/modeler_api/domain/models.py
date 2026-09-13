@@ -109,6 +109,28 @@ class Answer(BaseModel):
         return self
 
 
+ArtifactRenderSafety = Literal["safe_json", "unsafe", "metadata_only"]
+
+
+class Artifact(BaseModel):
+    id: str
+    type: str
+    name: str
+    summary: str
+    size_bytes: int
+    created_at: str
+    render_safety: ArtifactRenderSafety
+    source_request_id: str | None = None
+    correlation_id: str | None = None
+    provenance: list[str] = Field(default_factory=list)
+    removed: bool = False
+    removed_at: str | None = None
+    removed_reason: str | None = None
+    content_hash: str | None = None
+    warning: str | None = None
+    payload: dict | None = None
+
+
 class FeedbackEvent(BaseModel):
     id: str
     target_id: str

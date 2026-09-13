@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 CONTRACT_VERSION = "2026-09-12.hearth.v1"
 
+MAX_ARTIFACT_BYTES_RENDERABLE = 1_000_000
+
 
 RiskLevel = Literal["low", "medium", "high", "unsupported"]
 
@@ -210,9 +212,9 @@ def hearth_contract() -> ModelerIntegrationContract:
             id="artifact.read",
             label="List or retrieve visualization artifacts",
             risk_level="low",
-            endpoint=None,
+            endpoint="/integration/hearth/artifacts",
             mcp_tool="modeler_get_artifact",
-            status="planned",
+            status="available",
             requires_approval=False,
             description="Retrieve bounded artifact metadata or safe render payloads.",
             allowed_inputs=["artifact ID", "optional correlation ID"],
@@ -223,9 +225,9 @@ def hearth_contract() -> ModelerIntegrationContract:
             id="artifact.remove",
             label="Remove visualization artifact",
             risk_level="medium",
-            endpoint=None,
+            endpoint="/integration/hearth/artifacts",
             mcp_tool="modeler_remove_artifact",
-            status="planned",
+            status="available",
             requires_approval=True,
             description="Remove a generated artifact while preserving audit metadata.",
             allowed_inputs=["artifact ID", "operator reason"],
@@ -316,7 +318,7 @@ def hearth_contract() -> ModelerIntegrationContract:
         request_limits=RequestLimits(
             max_context_bytes=64_000,
             max_question_bytes=4_000,
-            max_artifact_bytes_renderable=1_000_000,
+            max_artifact_bytes_renderable=MAX_ARTIFACT_BYTES_RENDERABLE,
             timeout_seconds=30,
             oversized_artifact_behavior="summarize_or_metadata_only",
         ),
