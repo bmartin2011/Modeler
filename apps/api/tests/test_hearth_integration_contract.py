@@ -47,6 +47,17 @@ def test_hearth_contract_points_status_action_to_hearth_status_endpoint():
 
     assert status_action.endpoint == "/integration/hearth/status"
 
+
+def test_hearth_contract_marks_mapping_and_critique_actions_available_via_requests_endpoint():
+    contract = hearth_contract()
+    mapping_action = next(action for action in contract.safe_actions if action.id == "mapping.candidate")
+    critique_action = next(action for action in contract.safe_actions if action.id == "docs.critique")
+
+    assert mapping_action.status == "available"
+    assert mapping_action.endpoint == "/integration/hearth/requests"
+    assert critique_action.status == "available"
+    assert critique_action.endpoint == "/integration/hearth/requests"
+
 def test_hearth_contract_pins_response_metadata_requirements():
     contract = hearth_contract()
     metadata_fields = {requirement.field for requirement in contract.response_metadata_requirements}
