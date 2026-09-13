@@ -109,7 +109,7 @@ _ACTIVE_CONTENT_PATTERN = re.compile(
     r"\bon[a-z]+\s*=|javascript:|data:text/html|srcdoc\s*="
 )
 _CONSEQUENTIAL_ACTION_PATTERN = re.compile(
-    r"(?i)\b("
+    r"(?is)\b(after rendering|hearth|please|must|should|then)\b.{0,120}\b("
     r"write|modify|delete|commit|push|merge|open\s+pull\s+request|create\s+pull\s+request|"
     r"github|deploy|deployment|release|turn\s+on|turn\s+off|unlock|lock|thermostat|"
     r"home\s+assistant|smart[-_ ]home|smart\s+home"
