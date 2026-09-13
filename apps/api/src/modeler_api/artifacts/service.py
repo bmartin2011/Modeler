@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 
 from modeler_api.artifacts.store import JsonArtifactStore
 from modeler_api.domain.models import Artifact
+from modeler_api.integration_contract import MAX_ARTIFACT_BYTES_RENDERABLE
 
-MAX_ARTIFACT_BYTES_RENDERABLE = 1_000_000
+__all__ = ["MAX_ARTIFACT_BYTES_RENDERABLE", "artifact_detail", "artifact_metadata", "create_artifact"]
 
 
 def create_artifact(
@@ -20,7 +22,8 @@ def create_artifact(
     correlation_id: str | None,
     provenance: list[str],
 ) -> Artifact:
-    size_bytes = len(json.dumps(payload).encode("utf-8"))
+    serialized_payload = json.dumps(payload, sort_keys=True).encode("utf-8")
+    size_bytes = len(serialized_payload)
     render_safety = "safe_json" if size_bytes <= MAX_ARTIFACT_BYTES_RENDERABLE else "metadata_only"
 
     artifact = Artifact(
@@ -34,6 +37,7 @@ def create_artifact(
         source_request_id=source_request_id,
         correlation_id=correlation_id,
         provenance=provenance,
+        content_hash=hashlib.sha256(serialized_payload).hexdigest(),
         payload=payload if render_safety == "safe_json" else None,
     )
     return store.append(artifact)

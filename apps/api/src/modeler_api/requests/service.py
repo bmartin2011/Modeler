@@ -125,6 +125,7 @@ def handle_hearth_request(
     artifact_store: JsonArtifactStore,
 ) -> dict:
     correlation_id = envelope.correlation_id or header_correlation_id or _generate_correlation_id()
+    request_id = _generate_request_id()
 
     _validate_bounds(envelope)
 
@@ -132,7 +133,7 @@ def handle_hearth_request(
         result = _handle_question_answer(envelope.payload, repository_factory)
     elif envelope.request_type == "view.milky_way":
         result = _handle_view_milky_way(
-            envelope.payload, repository_factory, artifact_store, correlation_id
+            envelope.payload, repository_factory, artifact_store, correlation_id, request_id
         )
     elif envelope.request_type == "mapping.candidate":
         result = _handle_mapping_candidate(envelope.payload)
@@ -161,6 +162,7 @@ def _handle_view_milky_way(
     repository_factory: RepositoryFactory,
     artifact_store: JsonArtifactStore,
     correlation_id: str,
+    request_id: str,
 ) -> dict:
     lens = payload.get("lens", "value_stream")
     projection = build_milky_way_projection(repository_factory(), lens)
@@ -170,7 +172,7 @@ def _handle_view_milky_way(
         name=f"Milky Way projection ({lens})",
         summary=f"Milky Way graph projection using the {lens} lens.",
         payload=projection,
-        source_request_id=correlation_id,
+        source_request_id=request_id,
         correlation_id=correlation_id,
         provenance=["knowledge_graph"],
     )
@@ -200,3 +202,7 @@ def _handle_docs_critique(payload: dict) -> dict:
 
 def _generate_correlation_id() -> str:
     return f"modeler-req.{uuid.uuid4()}"
+
+
+def _generate_request_id() -> str:
+    return f"modeler-request.{uuid.uuid4()}"

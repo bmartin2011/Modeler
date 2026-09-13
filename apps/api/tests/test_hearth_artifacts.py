@@ -40,13 +40,59 @@ def test_view_milky_way_request_creates_listable_artifact_with_normalized_metada
     artifact = items[0]
     assert artifact["id"] == artifact_id
     assert artifact["type"] == "view.milky_way"
-    assert artifact["source_request_id"] == "hearth-viz-001"
+    assert artifact["source_request_id"]
     assert artifact["correlation_id"] == "hearth-viz-001"
     assert artifact["render_safety"] == "safe_json"
     assert artifact["removed"] is False
     assert artifact["size_bytes"] > 0
     assert artifact["created_at"]
     assert "payload" not in artifact
+    assert len(artifact["content_hash"]) == 64
+
+
+def test_artifact_content_hash_survives_removal_for_audit_verification():
+    create_response = client.post(
+        "/integration/hearth/requests",
+        json={"request_type": "view.milky_way", "payload": {}},
+    )
+    artifact_id = create_response.json()["result"]["artifact_id"]
+    original_hash = client.get(f"/integration/hearth/artifacts/{artifact_id}").json()["content_hash"]
+    assert original_hash is not None and len(original_hash) == 64
+
+    client.request("DELETE", f"/integration/hearth/artifacts/{artifact_id}", json={})
+
+    removed_hash = client.get(f"/integration/hearth/artifacts/{artifact_id}").json()["content_hash"]
+    assert removed_hash == original_hash
+
+
+def test_artifact_source_request_id_is_distinct_per_request_even_with_shared_correlation_id():
+    first = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "view.milky_way",
+            "correlation_id": "hearth-session-042",
+            "payload": {"lens": "value_stream"},
+        },
+    )
+    second = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "view.milky_way",
+            "correlation_id": "hearth-session-042",
+            "payload": {"lens": "organization"},
+        },
+    )
+
+    first_artifact_id = first.json()["result"]["artifact_id"]
+    second_artifact_id = second.json()["result"]["artifact_id"]
+
+    items = {item["id"]: item for item in client.get("/integration/hearth/artifacts").json()["items"]}
+    first_source_request_id = items[first_artifact_id]["source_request_id"]
+    second_source_request_id = items[second_artifact_id]["source_request_id"]
+
+    assert items[first_artifact_id]["correlation_id"] == "hearth-session-042"
+    assert items[second_artifact_id]["correlation_id"] == "hearth-session-042"
+    assert first_source_request_id != second_source_request_id
 
 
 def test_artifact_detail_returns_full_payload_for_safe_artifact():

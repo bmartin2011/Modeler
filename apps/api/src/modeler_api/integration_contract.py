@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 CONTRACT_VERSION = "2026-09-12.hearth.v1"
 
+MAX_ARTIFACT_BYTES_RENDERABLE = 1_000_000
+
 
 RiskLevel = Literal["low", "medium", "high", "unsupported"]
 
@@ -316,7 +318,7 @@ def hearth_contract() -> ModelerIntegrationContract:
         request_limits=RequestLimits(
             max_context_bytes=64_000,
             max_question_bytes=4_000,
-            max_artifact_bytes_renderable=1_000_000,
+            max_artifact_bytes_renderable=MAX_ARTIFACT_BYTES_RENDERABLE,
             timeout_seconds=30,
             oversized_artifact_behavior="summarize_or_metadata_only",
         ),

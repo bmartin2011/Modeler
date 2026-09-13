@@ -135,11 +135,13 @@ A `view.milky_way` request (see above) creates an artifact record. Artifact meta
 | `name`, `summary` | Human-readable description. |
 | `size_bytes` | Serialized payload size. |
 | `created_at` | ISO 8601 timestamp. |
-| `source_request_id`, `correlation_id` | Ties the artifact back to the originating Hearth request. |
+| `source_request_id` | A unique ID generated per request, distinct from `correlation_id` (a correlation ID may span several requests in one Hearth interaction; `source_request_id` pins the artifact to the exact request that produced it). |
+| `correlation_id` | The correlation ID supplied with (or generated for) the originating request. |
 | `provenance` | Source material behind the artifact (for example `knowledge_graph`). |
 | `render_safety` | `safe_json`, `metadata_only`, or `unsafe`. |
 | `removed`, `removed_at`, `removed_reason` | Soft-deletion state; metadata is retained for audit even after removal. |
-| `content_hash`, `warning` | Optional. |
+| `content_hash` | SHA-256 of the serialized payload, computed at creation and preserved after removal so a removed artifact's prior content can still be verified against an external record. |
+| `warning` | Optional. |
 
 Lifecycle endpoints:
 

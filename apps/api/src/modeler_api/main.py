@@ -68,8 +68,8 @@ def _repository() -> KnowledgeRepository:
     return KnowledgeRepository(load_seed_graph(seed_path))
 
 
-def _artifact_store_available() -> list[FeedbackEvent]:
-    return feedback_store.list()
+def _artifact_store_available() -> list:
+    return artifact_store.list()
 
 
 def _accepted_answer_corrections(target_id: str) -> list[LearningTrace]:
@@ -187,7 +187,9 @@ def get_hearth_artifact(artifact_id: str) -> dict:
 
 
 @app.delete("/integration/hearth/artifacts/{artifact_id}")
-def remove_hearth_artifact(artifact_id: str, request: ArtifactRemovalRequest) -> dict:
+def remove_hearth_artifact(
+    artifact_id: str, request: ArtifactRemovalRequest = ArtifactRemovalRequest()
+) -> dict:
     artifact = artifact_store.remove(
         artifact_id, reason=request.reason, removed_at=datetime.now(UTC).isoformat()
     )
