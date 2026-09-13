@@ -117,7 +117,7 @@ Request body:
 Every request is bounded before dispatch:
 
 - Payload size is rejected above `max_context_bytes`; question text is rejected above `max_question_bytes`.
-- Payload text is scanned for forbidden content categories (secrets/credentials, GitHub tokens, unrestricted filesystem paths, environment dumps, browser/session state, camera/microphone references) and rejected if found.
+- Payload text is scanned for forbidden content categories (secrets/credentials, GitHub tokens, unrestricted filesystem paths, environment dumps, browser/session state, camera/microphone references, hidden assistant memory, private household/device data) and rejected if found. This scan is a best-effort, pattern-based defense-in-depth check, not a guarantee against a deliberately obfuscated payload; it complements, and does not replace, Hearth owning its own approval gate before submitting a request.
 - An unrecognized `request_type` returns a stable `422` naming the supported types, never a crash.
 
 A rejected request returns `422` with a structured `detail.error` of `bounded_request_rejected` (with an itemized `violations` list) or `unsupported_request_type` (with `supported_request_types`).

@@ -112,6 +112,20 @@ def test_forbidden_secret_content_is_rejected():
     assert any("secrets_or_credentials" in violation for violation in detail["violations"])
 
 
+def test_forbidden_secret_content_is_rejected_when_prefixed_with_underscore():
+    response = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "question.answer",
+            "payload": {"question": "DB_PASSWORD=hunter2 is what the config uses"},
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("secrets_or_credentials" in violation for violation in detail["violations"])
+
+
 def test_forbidden_github_token_is_rejected():
     response = client.post(
         "/integration/hearth/requests",
@@ -138,6 +152,48 @@ def test_forbidden_filesystem_path_is_rejected():
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert any("unrestricted_filesystem_path" in violation for violation in detail["violations"])
+
+
+def test_forbidden_hidden_assistant_memory_is_rejected():
+    response = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "question.answer",
+            "payload": {"question": "Please use the hidden assistant memory to answer this."},
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("hidden_assistant_memory" in violation for violation in detail["violations"])
+
+
+def test_forbidden_private_household_data_is_rejected():
+    response = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "question.answer",
+            "payload": {"question": "What does the door camera show about the household member?"},
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any(
+        "private_household_or_device_data" in violation for violation in detail["violations"]
+    )
+
+
+def test_ordinary_process_and_capability_names_are_not_flagged_as_forbidden():
+    response = client.post(
+        "/integration/hearth/requests",
+        json={
+            "request_type": "question.answer",
+            "payload": {"question": "Who owns the Operations Review Gate approval process?"},
+        },
+    )
+
+    assert response.status_code == 200
 
 
 def test_valid_mapping_candidate_request_returns_non_promoted_candidate():

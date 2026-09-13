@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from collections.abc import Callable
@@ -26,15 +27,23 @@ MAX_QUESTION_BYTES = 4_000
 
 _FORBIDDEN_PATTERNS: dict[str, re.Pattern[str]] = {
     "secrets_or_credentials": re.compile(
-        r"(?i)\b(api[_-]?key|secret[_-]?key|password|passwd)\b\s*[:=]|sk-[A-Za-z0-9]{20,}"
+        r"(?i)(?:^|[^a-z0-9])(api[_-]?key|secret[_-]?key|password|passwd)\s*[:=]|sk-[A-Za-z0-9]{20,}"
     ),
     "github_token": re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"),
     "unrestricted_filesystem_path": re.compile(
-        r"/etc/|/root/|~[\\/]\.ssh|[A-Za-z]:\\Users\\"
+        r"(?i)/etc/|/root/|/home/|/var/|~[\\/]\.ssh|[A-Za-z]:\\(Users|Windows)\\|\\\\[A-Za-z0-9_.-]+\\[A-Za-z0-9_.$-]+"
     ),
-    "environment_dump": re.compile(r"(?im)^(PATH|HOME|AWS_[A-Z_]+)="),
-    "browser_state": re.compile(r"(?i)\b(cookie|session[_-]?token|local[_-]?storage)\b\s*[:=]"),
+    "environment_dump": re.compile(r"(?im)^[A-Z][A-Z0-9_]{2,}=\S"),
+    "browser_state": re.compile(
+        r"(?i)(?:^|[^a-z0-9])(cookie|session[_-]?token|local[_-]?storage)\s*[:=]"
+    ),
     "private_media": re.compile(r"(?i)\b(camera|microphone|webcam)\b"),
+    "hidden_assistant_memory": re.compile(
+        r"(?i)\b(assistant|claude|model)[_ -]?(memory|context)\b|hidden[_ -]?memory"
+    ),
+    "private_household_or_device_data": re.compile(
+        r"(?i)\b(smart[_ -]?lock|door[_ -]?camera|baby[_ -]?monitor|home[_ -]?address|household member)\b"
+    ),
 }
 
 RepositoryFactory = Callable[[], KnowledgeRepository]
@@ -61,7 +70,7 @@ class BoundedRequestError(Exception):
 def _validate_bounds(envelope: HearthRequestEnvelope) -> None:
     violations: list[str] = []
 
-    context_bytes = len(str(envelope.payload).encode("utf-8"))
+    context_bytes = len(json.dumps(envelope.payload).encode("utf-8"))
     if context_bytes > MAX_CONTEXT_BYTES:
         violations.append(
             f"payload exceeds max_context_bytes ({context_bytes} > {MAX_CONTEXT_BYTES})"
@@ -94,7 +103,8 @@ def _iter_strings(value: Any) -> list[str]:
         return [value]
     if isinstance(value, dict):
         strings: list[str] = []
-        for item in value.values():
+        for key, item in value.items():
+            strings.append(str(key))
             strings.extend(_iter_strings(item))
         return strings
     if isinstance(value, list):
