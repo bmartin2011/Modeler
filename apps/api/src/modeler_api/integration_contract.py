@@ -165,9 +165,9 @@ def hearth_contract() -> ModelerIntegrationContract:
             id="mapping.candidate",
             label="Submit candidate ArchiMate mapping",
             risk_level="medium",
-            endpoint=None,
+            endpoint="/integration/hearth/requests",
             mcp_tool="modeler_submit_candidate_mapping",
-            status="planned",
+            status="available",
             requires_approval=True,
             description=(
                 "Map approved conversational or document context into candidate architecture "
@@ -182,9 +182,9 @@ def hearth_contract() -> ModelerIntegrationContract:
             id="docs.critique",
             label="Request documentation quality critique",
             risk_level="medium",
-            endpoint=None,
+            endpoint="/integration/hearth/requests",
             mcp_tool="modeler_critique_docs",
-            status="planned",
+            status="available",
             requires_approval=True,
             description="Review approved documentation context for coverage, traceability, and ambiguity.",
             allowed_inputs=["approved documentation excerpts", "source references"],

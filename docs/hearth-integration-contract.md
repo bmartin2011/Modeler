@@ -96,6 +96,34 @@ Every Hearth-facing response should include the metadata needed to keep Modeler 
 | `advisory_only` | all Hearth-facing responses | Confirms Modeler cannot authorize consequential actions. |
 | `missing_information` | incomplete answers or visualizations | Keeps uncertainty visible. |
 
+## Bounded Request Submission
+
+Hearth submits approved requests through a single bounded endpoint:
+
+```http
+POST /integration/hearth/requests
+```
+
+Request body:
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `request_type` | yes | One of `question.answer`, `view.milky_way`, `mapping.candidate`, `docs.critique`. |
+| `correlation_id` | no | Falls back to the `X-Correlation-ID` header, then a generated ID. |
+| `payload` | no | Request-type-specific fields (for example `question`, `lens`, `text`, `excerpt`). |
+
+`view.milky_way` covers both architecture visualization and knowledge graph projection requests, since both read the same underlying Milky Way projection.
+
+Every request is bounded before dispatch:
+
+- Payload size is rejected above `max_context_bytes`; question text is rejected above `max_question_bytes`.
+- Payload text is scanned for forbidden content categories (secrets/credentials, GitHub tokens, unrestricted filesystem paths, environment dumps, browser/session state, camera/microphone references, hidden assistant memory, private household/device data) and rejected if found. This scan is a best-effort, pattern-based defense-in-depth check, not a guarantee against a deliberately obfuscated payload; it complements, and does not replace, Hearth owning its own approval gate before submitting a request.
+- An unrecognized `request_type` returns a stable `422` naming the supported types, never a crash.
+
+A rejected request returns `422` with a structured `detail.error` of `bounded_request_rejected` (with an itemized `violations` list) or `unsupported_request_type` (with `supported_request_types`).
+
+`mapping.candidate` and `docs.critique` currently return a bounded, clearly-labeled placeholder response (unpromoted candidate, or a quality-checklist) because their underlying extraction and critique engines are not yet implemented; the request is still validated, bounded, and auditable.
+
 ## Hearth Status And Readiness
 
 Modeler exposes three local availability surfaces:

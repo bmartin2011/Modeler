@@ -12,6 +12,13 @@ from modeler_api.feedback.store import JsonFeedbackStore
 from modeler_api.hearth_status import build_hearth_status, readiness_status_code
 from modeler_api.integration_contract import hearth_contract
 from modeler_api.qa.answer_service import AnswerService
+from modeler_api.requests.service import (
+    SUPPORTED_REQUEST_TYPES,
+    BoundedRequestError,
+    HearthRequestEnvelope,
+    UnsupportedRequestTypeError,
+    handle_hearth_request,
+)
 from modeler_api.views.milky_way import build_milky_way_projection
 
 
@@ -117,6 +124,36 @@ def hearth_readiness(
     )
     response.status_code = readiness_status_code(body["status"])
     return body
+
+
+@app.post("/integration/hearth/requests")
+def hearth_request_submission(
+    envelope: HearthRequestEnvelope,
+    x_correlation_id: str | None = Header(default=None),
+) -> dict:
+    try:
+        return handle_hearth_request(
+            envelope,
+            header_correlation_id=x_correlation_id,
+            repository_factory=_repository,
+        )
+    except UnsupportedRequestTypeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "unsupported_request_type",
+                "message": str(exc),
+                "supported_request_types": list(SUPPORTED_REQUEST_TYPES),
+            },
+        ) from exc
+    except BoundedRequestError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "bounded_request_rejected",
+                "violations": exc.violations,
+            },
+        ) from exc
 
 
 @app.get("/graph/summary")
