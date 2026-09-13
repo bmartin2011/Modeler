@@ -41,6 +41,14 @@ class RequestLimits(BaseModel):
     oversized_artifact_behavior: str
 
 
+class AllowedVisualizationOutputFormat(BaseModel):
+    format: str
+    content_types: list[str]
+    render_safety: str
+    hearth_rendering: str
+    constraints: list[str]
+
+
 class RequiredConfiguration(BaseModel):
     name: str
     required: bool
@@ -58,6 +66,7 @@ class ModelerIntegrationContract(BaseModel):
     compatibility_status_endpoint: str
     required_configuration: list[RequiredConfiguration]
     request_limits: RequestLimits
+    allowed_visualization_output_formats: list[AllowedVisualizationOutputFormat]
     response_metadata_requirements: list[ResponseMetadataRequirement]
     safe_actions: list[ContractAction]
     unsupported_actions: list[ContractAction]
@@ -114,6 +123,19 @@ def hearth_contract() -> ModelerIntegrationContract:
             required_when="Modeler cannot fully support an answer or visualization",
             purpose="Keeps uncertainty visible to the Hearth operator.",
         ),
+        ResponseMetadataRequirement(
+            field="render_safety",
+            required_when="all visualization artifacts",
+            purpose="Tells Hearth whether the artifact payload is safe to render or metadata-only.",
+        ),
+        ResponseMetadataRequirement(
+            field="render_guidance",
+            required_when="all visualization artifacts",
+            purpose=(
+                "Gives Hearth bounded rendering instructions that never authorize writes "
+                "or consequential actions."
+            ),
+        ),
     ]
 
     common_response_guarantees = [
@@ -123,6 +145,69 @@ def hearth_contract() -> ModelerIntegrationContract:
         "includes confidence for inferred or advisory claims",
         "includes trust-boundary labels for supplied or external context",
         "is advisory-only and non-authoritative",
+        "cannot instruct Hearth to write files, change GitHub, deploy, release, or control smart-home devices",
+    ]
+
+    allowed_visualization_output_formats = [
+        AllowedVisualizationOutputFormat(
+            format="json_projection",
+            content_types=["application/json"],
+            render_safety="safe_json",
+            hearth_rendering="Render with Hearth-native components from structured data only.",
+            constraints=[
+                "Payload must be valid JSON data, not executable code.",
+                "Payload must stay within max_artifact_bytes_renderable.",
+                "Payload must not include instructions for writes, deployments, GitHub changes, releases, or smart-home actions.",
+            ],
+        ),
+        AllowedVisualizationOutputFormat(
+            format="inert_svg",
+            content_types=["image/svg+xml"],
+            render_safety="safe_svg",
+            hearth_rendering=(
+                "Render as inert image markup only after Hearth applies its own SVG safety policy."
+            ),
+            constraints=[
+                "No script, event handler, foreignObject, external reference, or javascript URL content.",
+                "Payload must stay within max_artifact_bytes_renderable.",
+                "Treat as visual display only; do not execute embedded behavior.",
+            ],
+        ),
+        AllowedVisualizationOutputFormat(
+            format="static_image",
+            content_types=["image/png", "image/jpeg", "image/webp"],
+            render_safety="safe_image",
+            hearth_rendering="Render as a static image preview with no active behavior.",
+            constraints=[
+                "Artifact payload may include bounded metadata or a trusted local reference, not executable content.",
+                "Payload must stay within max_artifact_bytes_renderable.",
+                "Image metadata cannot authorize Hearth-side actions.",
+            ],
+        ),
+        AllowedVisualizationOutputFormat(
+            format="sanitized_html",
+            content_types=["text/html"],
+            render_safety="safe_html",
+            hearth_rendering="Render only in a sandboxed, inert preview when explicitly needed.",
+            constraints=[
+                "No script, event handler, iframe, object, embed, form, external reference, or javascript URL content.",
+                "Payload must stay within max_artifact_bytes_renderable.",
+                "HTML is display-only and cannot request Hearth actions.",
+            ],
+        ),
+        AllowedVisualizationOutputFormat(
+            format="metadata_only",
+            content_types=[],
+            render_safety="metadata_only",
+            hearth_rendering=(
+                "Show metadata, summary, provenance, size, safety state, and metadata_only_reason; "
+                "do not render payload."
+            ),
+            constraints=[
+                "Required for oversized, unsafe, removed, unknown, or unsupported active-content artifacts.",
+                "Never includes render payload content.",
+            ],
+        ),
     ]
 
     safe_actions = [
@@ -219,7 +304,10 @@ def hearth_contract() -> ModelerIntegrationContract:
             description="Retrieve bounded artifact metadata or safe render payloads.",
             allowed_inputs=["artifact ID", "optional correlation ID"],
             response_guarantees=common_response_guarantees
-            + ["unsafe or oversized artifacts are metadata-only"],
+            + [
+                "includes render_safety, render_format, and render_guidance",
+                "unsafe, active, action-instructing, or oversized artifacts are metadata-only",
+            ],
         ),
         ContractAction(
             id="artifact.remove",
@@ -322,6 +410,7 @@ def hearth_contract() -> ModelerIntegrationContract:
             timeout_seconds=30,
             oversized_artifact_behavior="summarize_or_metadata_only",
         ),
+        allowed_visualization_output_formats=allowed_visualization_output_formats,
         response_metadata_requirements=metadata_requirements,
         safe_actions=safe_actions,
         unsupported_actions=unsupported_actions,
