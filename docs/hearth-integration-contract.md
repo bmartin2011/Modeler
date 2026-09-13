@@ -26,6 +26,7 @@ The contract advertises:
 - request and response limits
 - safe actions
 - unsupported actions
+- allowed visualization output formats
 - response metadata requirements
 - trust boundaries
 
@@ -82,6 +83,20 @@ Initial limits:
 
 Future issues may tune these limits, but the contract should remain explicit and versioned.
 
+## Allowed Visualization Output Formats
+
+Hearth-facing artifacts must use one of these output formats. Each artifact includes `render_safety`, `render_format`, and `render_guidance` so Hearth can decide whether to render a payload or show metadata only.
+
+| Format | Content types | Safety | Hearth rendering guidance |
+| --- | --- | --- | --- |
+| `json_projection` | `application/json` | `safe_json` | Render with Hearth-native components from structured data only. |
+| `inert_svg` | `image/svg+xml` | `safe_svg` | Render as inert image markup only after Hearth applies its own SVG safety policy. |
+| `static_image` | `image/png`, `image/jpeg`, `image/webp` | `safe_image` | Render as a static image preview with no active behavior. |
+| `sanitized_html` | `text/html` | `safe_html` | Render only in a sandboxed, inert preview when explicitly needed. |
+| `metadata_only` | none | `metadata_only` | Show metadata, summary, provenance, size, safety state, and `metadata_only_reason`; do not render payload content. |
+
+Renderable formats are display-only. Artifact payloads and render guidance cannot instruct Hearth to write files, make GitHub changes, deploy software, create releases, or control smart-home devices. Any oversized payload, active content, unsupported format, removed artifact, or payload that attempts to authorize consequential actions is exposed as `metadata_only` and its render payload is withheld.
+
 ## Response Metadata Requirements
 
 Every Hearth-facing response should include the metadata needed to keep Modeler auditable and non-authoritative.
@@ -95,6 +110,8 @@ Every Hearth-facing response should include the metadata needed to keep Modeler 
 | `trust_boundary` | outputs from supplied or external context | Preserves learning eligibility, confidentiality, and permission state. |
 | `advisory_only` | all Hearth-facing responses | Confirms Modeler cannot authorize consequential actions. |
 | `missing_information` | incomplete answers or visualizations | Keeps uncertainty visible. |
+| `render_safety` | all visualization artifacts | Tells Hearth whether the artifact payload is safe to render or metadata-only. |
+| `render_guidance` | all visualization artifacts | Gives Hearth bounded rendering instructions that never authorize writes or consequential actions. |
 
 ## Bounded Request Submission
 
@@ -138,7 +155,9 @@ A `view.milky_way` request (see above) creates an artifact record. Artifact meta
 | `source_request_id` | A unique ID generated per request, distinct from `correlation_id` (a correlation ID may span several requests in one Hearth interaction; `source_request_id` pins the artifact to the exact request that produced it). |
 | `correlation_id` | The correlation ID supplied with (or generated for) the originating request. |
 | `provenance` | Source material behind the artifact (for example `knowledge_graph`). |
-| `render_safety` | `safe_json`, `metadata_only`, or `unsafe`. |
+| `render_safety` | `safe_json`, `safe_svg`, `safe_image`, `safe_html`, `metadata_only`, or `unsafe`. |
+| `render_format` | `json_projection`, `inert_svg`, `static_image`, `sanitized_html`, or `metadata_only`. |
+| `render_guidance` | Bounded rendering guidance for Hearth, including whether the payload is renderable and the forbidden action categories. |
 | `removed`, `removed_at`, `removed_reason` | Soft-deletion state; metadata is retained for audit even after removal. |
 | `content_hash` | SHA-256 of the serialized payload, computed at creation and preserved after removal so a removed artifact's prior content can still be verified against an external record. |
 | `warning` | Optional. |
@@ -152,7 +171,7 @@ DELETE /integration/hearth/artifacts/{artifact_id}
 ```
 
 - `GET /integration/hearth/artifacts` returns metadata only (no `payload`) for every artifact, removed or not.
-- `GET /integration/hearth/artifacts/{artifact_id}` returns full metadata, plus `payload` only when the artifact is not removed and `render_safety == safe_json`. Otherwise the response includes `metadata_only_reason` (`artifact_removed`, or `render_safety_<value>`) and withholds the payload. Unknown IDs return `404`.
+- `GET /integration/hearth/artifacts/{artifact_id}` returns full metadata, plus `payload` only when the artifact is not removed and `render_safety` is one of the safe render classifications. Otherwise the response includes `metadata_only_reason` (`artifact_removed`, the safety classifier reason, or `render_safety_<value>`) and withholds the payload. Unknown IDs return `404`.
 - `DELETE /integration/hearth/artifacts/{artifact_id}` accepts an optional `{"reason": "..."}` body, marks the artifact removed, clears its payload, and returns the updated metadata. Unknown IDs return `404`. Removal never deletes the metadata row, so audit history survives.
 
 Artifacts larger than `max_artifact_bytes_renderable` are created as `metadata_only` from the start rather than being rejected outright, per the contract's `oversized_artifact_behavior`.

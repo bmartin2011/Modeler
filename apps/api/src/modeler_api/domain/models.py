@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -109,7 +109,21 @@ class Answer(BaseModel):
         return self
 
 
-ArtifactRenderSafety = Literal["safe_json", "unsafe", "metadata_only"]
+ArtifactRenderSafety = Literal[
+    "safe_json",
+    "safe_svg",
+    "safe_image",
+    "safe_html",
+    "unsafe",
+    "metadata_only",
+]
+ArtifactRenderFormat = Literal[
+    "json_projection",
+    "inert_svg",
+    "static_image",
+    "sanitized_html",
+    "metadata_only",
+]
 
 
 class Artifact(BaseModel):
@@ -120,6 +134,8 @@ class Artifact(BaseModel):
     size_bytes: int
     created_at: str
     render_safety: ArtifactRenderSafety
+    render_format: ArtifactRenderFormat = "metadata_only"
+    render_guidance: dict[str, Any] = Field(default_factory=dict)
     source_request_id: str | None = None
     correlation_id: str | None = None
     provenance: list[str] = Field(default_factory=list)

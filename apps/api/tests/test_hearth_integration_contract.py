@@ -69,6 +69,7 @@ def test_hearth_contract_marks_artifact_read_and_remove_actions_available():
     assert remove_action.status == "available"
     assert remove_action.endpoint == "/integration/hearth/artifacts"
 
+
 def test_hearth_contract_pins_response_metadata_requirements():
     contract = hearth_contract()
     metadata_fields = {requirement.field for requirement in contract.response_metadata_requirements}
@@ -81,7 +82,33 @@ def test_hearth_contract_pins_response_metadata_requirements():
         "trust_boundary",
         "advisory_only",
         "missing_information",
+        "render_safety",
+        "render_guidance",
     }.issubset(metadata_fields)
+
+
+def test_hearth_contract_documents_visualization_render_safety_and_guidance():
+    contract = hearth_contract()
+    formats = {item.format: item for item in contract.allowed_visualization_output_formats}
+    artifact_read = next(action for action in contract.safe_actions if action.id == "artifact.read")
+
+    assert formats["json_projection"].render_safety == "safe_json"
+    assert formats["inert_svg"].render_safety == "safe_svg"
+    assert formats["static_image"].content_types == ["image/png", "image/jpeg", "image/webp"]
+    assert formats["metadata_only"].render_safety == "metadata_only"
+    assert any("render_safety" in guarantee for guarantee in artifact_read.response_guarantees)
+    assert any("metadata-only" in guarantee for guarantee in artifact_read.response_guarantees)
+
+
+def test_hearth_contract_forbids_consequential_output_actions():
+    contract = hearth_contract()
+    serialized = contract.model_dump_json()
+
+    assert "cannot instruct Hearth to write files" in serialized
+    assert "deployments" in serialized
+    assert "GitHub changes" in serialized
+    assert "releases" in serialized
+    assert "smart-home actions" in serialized
 
 
 def test_hearth_contract_forbids_sensitive_context_for_approved_submissions():
@@ -105,6 +132,13 @@ def test_hearth_contract_endpoint_returns_contract_shape():
     assert body["contract_version"] == CONTRACT_VERSION
     assert body["advisory_only"] is True
     assert body["request_limits"]["oversized_artifact_behavior"] == "summarize_or_metadata_only"
+    assert {item["format"] for item in body["allowed_visualization_output_formats"]} == {
+        "json_projection",
+        "inert_svg",
+        "static_image",
+        "sanitized_html",
+        "metadata_only",
+    }
     assert body["required_configuration"][0]["name"] == "MODELER_BASE_URL"
 
 
