@@ -7,11 +7,14 @@ from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from modeler_api.artifacts.service import artifact_detail, artifact_metadata
-from modeler_api.artifacts.store import JsonArtifactStore
-from modeler_api.domain.repository import KnowledgeRepository
-from modeler_api.domain.seed_loader import load_seed_graph
+from modeler_api.context import (
+    accepted_answer_corrections_from_events,
+    answer_question,
+    build_artifact_store,
+    build_feedback_store,
+    build_repository_factory,
+)
 from modeler_api.domain.models import FeedbackEvent, LearningTrace
-from modeler_api.feedback.store import JsonFeedbackStore
 from modeler_api.hearth_status import build_hearth_status, readiness_status_code
 from modeler_api.integration_contract import hearth_contract
 from modeler_api.qa.answer_service import AnswerService
@@ -44,53 +47,20 @@ class ArtifactRemovalRequest(BaseModel):
 
 
 app = FastAPI(title="Modeler API")
-feedback_store = JsonFeedbackStore(
-    Path(
-        os.environ.get(
-            "MODELER_FEEDBACK_STORE_PATH",
-            Path(__file__).resolve().parents[4] / "data" / "runtime" / "feedback-events.json",
-        )
-    )
-)
+feedback_store = build_feedback_store()
 feedback_events: list[FeedbackEvent] = []
-artifact_store = JsonArtifactStore(
-    Path(
-        os.environ.get(
-            "MODELER_ARTIFACT_STORE_PATH",
-            Path(__file__).resolve().parents[4] / "data" / "runtime" / "artifacts.json",
-        )
-    )
-)
-
-
-def _repository() -> KnowledgeRepository:
-    seed_path = Path(__file__).resolve().parents[4] / "data" / "seed" / "acme.json"
-    return KnowledgeRepository(load_seed_graph(seed_path))
+artifact_store = build_artifact_store()
+_repository = build_repository_factory()
 
 
 def _artifact_store_available() -> list:
     return artifact_store.list()
 
 
-def _accepted_answer_corrections(target_id: str) -> list[LearningTrace]:
-    return _accepted_answer_corrections_from_events(target_id, feedback_store.list())
-
-
 def _accepted_answer_corrections_from_events(
     target_id: str, events: list[FeedbackEvent]
 ) -> list[LearningTrace]:
-    return [
-        LearningTrace(
-            feedback_id=event.id,
-            target_id=event.target_id,
-            comment=event.comment,
-            review_state="accepted",
-        )
-        for event in events
-        if event.target_id == target_id
-        and event.rating == "correction"
-        and event.review_state == "accepted"
-    ]
+    return accepted_answer_corrections_from_events(target_id, events)
 
 
 def _answer_with_corrections(corrections: list[LearningTrace]) -> dict:
@@ -215,11 +185,8 @@ def milky_way(lens: Literal["value_stream", "organization"] = "value_stream") ->
 
 
 @app.post("/questions")
-def answer_question(request: QuestionRequest) -> dict:
-    answer = AnswerService(
-        _repository(),
-        accepted_corrections=_accepted_answer_corrections("answer.Who_reports_to_John"),
-    ).answer(request.question)
+def answer_question_route(request: QuestionRequest) -> dict:
+    answer = answer_question(_repository, feedback_store, request.question)
     return answer.model_dump()
 
 
