@@ -55,9 +55,9 @@ Extract `apps/api/src/modeler_api/context.py`:
 | `modeler_get_milky_way_projection` | `lens?` (`value_stream` \| `organization`), `correlation_id?` | `build_milky_way_projection(...)` | none |
 | `modeler_submit_candidate_mapping` | `text`, `source_label?`, `correlation_id?` | `handle_hearth_request(envelope(type="mapping.candidate"))` | requires `approval_id` |
 | `modeler_critique_docs` | `source_type?`, `correlation_id?` | `handle_hearth_request(envelope(type="docs.critique"))` | requires `approval_id` |
-| `modeler_record_feedback` | `target_id`, `rating`, `comment` | `feedback_store.append(...)` | none |
-| `modeler_get_artifact` | `artifact_id?` | `artifact_store.list()` when `artifact_id` omitted, else `artifact_store.get(artifact_id)` | none |
-| `modeler_remove_artifact` | `artifact_id`, `reason?`, `approval_id` | `artifact_store.remove(...)` | requires `approval_id` |
+| `modeler_record_feedback` | `target_id`, `rating`, `comment`, `correlation_id?` | `feedback_store.append(...)` | none |
+| `modeler_get_artifact` | `artifact_id?`, `correlation_id?` | `artifact_store.list()` when `artifact_id` omitted, else `artifact_store.get(artifact_id)` | none |
+| `modeler_remove_artifact` | `artifact_id`, `reason?`, `approval_id`, `correlation_id?` | `artifact_store.remove(...)` | requires `approval_id` |
 
 Notes:
 
@@ -76,6 +76,8 @@ Tools whose corresponding contract action has `requires_approval: true` (`questi
 Modeler does not verify the `approval_id` against any store — presence only. Verifying it is Hearth's responsibility, consistent with the contract's existing trust boundary ("Hearth owns approvals, policy, audit...").
 
 ## Response Shape
+
+This applies uniformly to all 8 tools — every one of them, not just a subset, wraps its result in this envelope.
 
 Every successful tool call's result JSON includes:
 

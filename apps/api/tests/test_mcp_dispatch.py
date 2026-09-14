@@ -1,6 +1,5 @@
 import asyncio
 import json
-from pathlib import Path
 
 import pytest
 
@@ -53,16 +52,20 @@ def test_modeler_record_feedback_appends_and_returns_pending_event():
         )
     )
 
-    assert result["target_id"] == "answer.Who_reports_to_John"
-    assert result["rating"] == "thumbs_up"
-    assert result["review_state"] == "pending"
-    assert result["id"] == "feedback.1"
+    assert result["contract_version"] == CONTRACT_VERSION
+    assert result["advisory_only"] is True
+    assert result["result"]["target_id"] == "answer.Who_reports_to_John"
+    assert result["result"]["rating"] == "thumbs_up"
+    assert result["result"]["review_state"] == "pending"
+    assert result["result"]["id"] == "feedback.1"
 
 
 def test_modeler_get_artifact_without_id_lists_all_artifacts():
     result = _run(dispatch.modeler_get_artifact())
 
-    assert result == {"items": []}
+    assert result["contract_version"] == CONTRACT_VERSION
+    assert result["advisory_only"] is True
+    assert result["result"] == {"items": []}
 
 
 def test_modeler_get_artifact_with_unknown_id_raises_not_found():
@@ -145,7 +148,6 @@ def test_modeler_remove_artifact_requires_approval_id():
 
 def test_modeler_remove_artifact_removes_existing_artifact():
     projection_result = _run(dispatch.modeler_get_milky_way_projection())
-    artifact_id = None  # modeler_get_milky_way_projection does not create an artifact
 
     from modeler_api.artifacts.service import create_artifact
 
@@ -166,8 +168,10 @@ def test_modeler_remove_artifact_removes_existing_artifact():
         )
     )
 
-    assert result["removed"] is True
-    assert result["removed_reason"] == "cleanup"
+    assert result["contract_version"] == CONTRACT_VERSION
+    assert result["advisory_only"] is True
+    assert result["result"]["removed"] is True
+    assert result["result"]["removed_reason"] == "cleanup"
 
 
 def test_modeler_remove_artifact_raises_not_found_for_unknown_id():

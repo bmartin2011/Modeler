@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -73,3 +72,17 @@ def test_modeler_ask_tool_call_succeeds_with_approval_id():
     )
 
     assert result.isError is not True
+
+
+def test_tool_input_schemas_expose_declared_parameters():
+    tools = {t.name: t.inputSchema for t in _run(server.mcp.list_tools())}
+
+    ask_schema = tools["modeler_ask"]
+    assert set(ask_schema["required"]) == {"question", "approval_id"}
+    assert "correlation_id" in ask_schema["properties"]
+
+    projection_schema = tools["modeler_get_milky_way_projection"]
+    assert projection_schema["properties"]["lens"]["enum"] == ["value_stream", "organization"]
+
+    for gated_tool in dispatch.GATED_TOOLS:
+        assert "approval_id" in tools[gated_tool]["required"]

@@ -38,9 +38,9 @@ Every tool response includes `contract_version` and `advisory_only: true`, match
 | `modeler_get_milky_way_projection` | `lens?` (`value_stream` \| `organization`), `correlation_id?` | No | Returns a Milky Way graph projection, matching `/views/milky-way`. |
 | `modeler_submit_candidate_mapping` | `text`, `approval_id`, `source_label?`, `correlation_id?` | Yes | Captures conversational text as a candidate mapping without promoting it to learned knowledge. |
 | `modeler_critique_docs` | `approval_id`, `source_type?`, `correlation_id?` | Yes | Returns a documentation quality checklist for the given source type. |
-| `modeler_record_feedback` | `target_id`, `rating`, `comment` | No | Records thumbs-up, thumbs-down, correction, or deviation feedback. |
-| `modeler_get_artifact` | `artifact_id?` | No | Lists all artifacts when `artifact_id` is omitted, otherwise returns that artifact's detail (or a not-found error). |
-| `modeler_remove_artifact` | `artifact_id`, `approval_id`, `reason?` | Yes | Removes an artifact while preserving its audit metadata. |
+| `modeler_record_feedback` | `target_id`, `rating`, `comment`, `correlation_id?` | No | Records thumbs-up, thumbs-down, correction, or deviation feedback. |
+| `modeler_get_artifact` | `artifact_id?`, `correlation_id?` | No | Lists all artifacts when `artifact_id` is omitted, otherwise returns that artifact's detail (or a not-found error). |
+| `modeler_remove_artifact` | `artifact_id`, `approval_id`, `reason?`, `correlation_id?` | Yes | Removes an artifact while preserving its audit metadata. |
 
 A missing or empty `approval_id` on a gated tool returns an MCP tool error (`isError: true`) with a JSON body like `{"error": "approval_required", "tool": "modeler_ask"}`.
 

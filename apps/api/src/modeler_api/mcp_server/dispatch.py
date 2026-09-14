@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime
 from typing import Literal
 
 from modeler_api.artifacts.service import artifact_detail, artifact_metadata
@@ -102,7 +103,9 @@ async def modeler_record_feedback(
     target_id: str,
     rating: Literal["thumbs_up", "thumbs_down", "correction", "deviation"],
     comment: str,
+    correlation_id: str | None = None,
 ) -> dict:
+    resolved_correlation_id = correlation_id or _generate_correlation_id()
     event = feedback_store.append(
         FeedbackEvent(
             id="feedback.pending",
@@ -112,17 +115,32 @@ async def modeler_record_feedback(
             creates_learning_signal=True,
         )
     )
-    return event.model_dump()
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "advisory_only": True,
+        "correlation_id": resolved_correlation_id,
+        "result": event.model_dump(),
+    }
 
 
-async def modeler_get_artifact(artifact_id: str | None = None) -> dict:
+async def modeler_get_artifact(
+    artifact_id: str | None = None,
+    correlation_id: str | None = None,
+) -> dict:
+    resolved_correlation_id = correlation_id or _generate_correlation_id()
     if artifact_id is None:
-        return {"items": [artifact_metadata(artifact) for artifact in artifact_store.list()]}
-
-    artifact = artifact_store.get(artifact_id)
-    if artifact is None:
-        raise ArtifactNotFoundError(artifact_id)
-    return artifact_detail(artifact)
+        result = {"items": [artifact_metadata(artifact) for artifact in artifact_store.list()]}
+    else:
+        artifact = artifact_store.get(artifact_id)
+        if artifact is None:
+            raise ArtifactNotFoundError(artifact_id)
+        result = artifact_detail(artifact)
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "advisory_only": True,
+        "correlation_id": resolved_correlation_id,
+        "result": result,
+    }
 
 
 def _handle_envelope(envelope: HearthRequestEnvelope) -> dict:
@@ -186,13 +204,18 @@ async def modeler_remove_artifact(
     artifact_id: str,
     approval_id: str,
     reason: str | None = None,
+    correlation_id: str | None = None,
 ) -> dict:
     _require_approval(approval_id, tool="modeler_remove_artifact")
-    from datetime import UTC, datetime
-
+    resolved_correlation_id = correlation_id or _generate_correlation_id()
     artifact = artifact_store.remove(
         artifact_id, reason=reason, removed_at=datetime.now(UTC).isoformat()
     )
     if artifact is None:
         raise ArtifactNotFoundError(artifact_id)
-    return artifact_metadata(artifact)
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "advisory_only": True,
+        "correlation_id": resolved_correlation_id,
+        "result": artifact_metadata(artifact),
+    }

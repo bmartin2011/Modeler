@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from modeler_api.domain.models import FeedbackEvent
 from modeler_api.feedback.store import JsonFeedbackStore
 
