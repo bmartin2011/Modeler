@@ -215,3 +215,27 @@ def test_hearth_readiness_returns_unavailable_when_required_dependency_fails(
         "detail": "seed graph missing",
     }
     assert body["dependencies"]["artifact_store"]["status"] == "available"
+
+
+def test_every_contract_mcp_tool_is_registered_on_the_mcp_server_and_vice_versa():
+    from modeler_api.mcp_server.server import TOOL_NAMES
+
+    contract = hearth_contract()
+    contract_mcp_tool_ids = {
+        action.mcp_tool for action in contract.safe_actions if action.mcp_tool is not None
+    }
+
+    assert contract_mcp_tool_ids == TOOL_NAMES
+
+
+def test_every_requires_approval_contract_action_is_a_gated_mcp_tool():
+    from modeler_api.mcp_server.dispatch import GATED_TOOLS
+
+    contract = hearth_contract()
+    gated_contract_mcp_tool_ids = {
+        action.mcp_tool
+        for action in contract.safe_actions
+        if action.mcp_tool is not None and action.requires_approval
+    }
+
+    assert gated_contract_mcp_tool_ids == GATED_TOOLS
