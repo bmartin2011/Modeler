@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -67,3 +68,112 @@ def test_modeler_get_artifact_without_id_lists_all_artifacts():
 def test_modeler_get_artifact_with_unknown_id_raises_not_found():
     with pytest.raises(dispatch.ArtifactNotFoundError):
         _run(dispatch.modeler_get_artifact(artifact_id="artifact.does-not-exist"))
+
+
+def test_modeler_ask_requires_non_empty_approval_id():
+    with pytest.raises(dispatch.ApprovalRequiredError) as exc_info:
+        _run(dispatch.modeler_ask(question="Who reports to John?", approval_id=""))
+
+    assert exc_info.value.tool == "modeler_ask"
+
+
+def test_modeler_ask_answers_when_approval_id_present():
+    result = _run(
+        dispatch.modeler_ask(question="Who reports to John?", approval_id="hearth-approval-1")
+    )
+
+    assert result["contract_version"] == CONTRACT_VERSION
+    assert result["advisory_only"] is True
+    assert "Maya" in result["result"]["answer"]
+
+
+def test_modeler_submit_candidate_mapping_requires_approval_id():
+    with pytest.raises(dispatch.ApprovalRequiredError):
+        _run(
+            dispatch.modeler_submit_candidate_mapping(
+                text="Luis approves onboarding exceptions.", approval_id=""
+            )
+        )
+
+
+def test_modeler_submit_candidate_mapping_returns_non_promoted_candidate():
+    result = _run(
+        dispatch.modeler_submit_candidate_mapping(
+            text="Luis approves onboarding exceptions.",
+            approval_id="hearth-approval-2",
+            source_label="hearth-chat",
+        )
+    )
+
+    assert result["result"]["promoted"] is False
+    assert result["result"]["source_label"] == "hearth-chat"
+
+
+def test_modeler_submit_candidate_mapping_rejects_forbidden_content():
+    with pytest.raises(dispatch.BoundedRequestRejectedError) as exc_info:
+        _run(
+            dispatch.modeler_submit_candidate_mapping(
+                text="here is api_key: sk-abcdefghijklmnopqrstuvwxyz123456",
+                approval_id="hearth-approval-3",
+            )
+        )
+
+    violations = json.loads(str(exc_info.value))["violations"]
+    assert any("secrets_or_credentials" in violation for violation in violations)
+
+
+def test_modeler_critique_docs_requires_approval_id():
+    with pytest.raises(dispatch.ApprovalRequiredError):
+        _run(dispatch.modeler_critique_docs(approval_id=""))
+
+
+def test_modeler_critique_docs_returns_quality_checklist():
+    result = _run(dispatch.modeler_critique_docs(approval_id="hearth-approval-4", source_type="internal"))
+
+    assert result["result"]["source_type"] == "internal"
+    assert "coverage" in result["result"]["quality_checks"]
+
+
+def test_modeler_remove_artifact_requires_approval_id():
+    with pytest.raises(dispatch.ApprovalRequiredError):
+        _run(
+            dispatch.modeler_remove_artifact(
+                artifact_id="artifact.1", approval_id="", reason="cleanup"
+            )
+        )
+
+
+def test_modeler_remove_artifact_removes_existing_artifact():
+    projection_result = _run(dispatch.modeler_get_milky_way_projection())
+    artifact_id = None  # modeler_get_milky_way_projection does not create an artifact
+
+    from modeler_api.artifacts.service import create_artifact
+
+    artifact = create_artifact(
+        dispatch.artifact_store,
+        type="view.milky_way",
+        name="Milky Way projection (value_stream)",
+        summary="Test artifact.",
+        payload=projection_result["result"],
+        source_request_id="request.test",
+        correlation_id="corr.test",
+        provenance=["knowledge_graph"],
+    )
+
+    result = _run(
+        dispatch.modeler_remove_artifact(
+            artifact_id=artifact.id, approval_id="hearth-approval-5", reason="cleanup"
+        )
+    )
+
+    assert result["removed"] is True
+    assert result["removed_reason"] == "cleanup"
+
+
+def test_modeler_remove_artifact_raises_not_found_for_unknown_id():
+    with pytest.raises(dispatch.ArtifactNotFoundError):
+        _run(
+            dispatch.modeler_remove_artifact(
+                artifact_id="artifact.does-not-exist", approval_id="hearth-approval-6"
+            )
+        )

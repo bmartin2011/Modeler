@@ -15,6 +15,11 @@ from modeler_api.context import (
 from modeler_api.domain.models import FeedbackEvent
 from modeler_api.hearth_status import build_hearth_status
 from modeler_api.integration_contract import CONTRACT_VERSION
+from modeler_api.requests.service import (
+    BoundedRequestError,
+    HearthRequestEnvelope,
+    handle_hearth_request,
+)
 from modeler_api.views.milky_way import build_milky_way_projection
 
 GATED_TOOLS: frozenset[str] = frozenset(
@@ -42,6 +47,14 @@ class ArtifactNotFoundError(ModelerToolError):
         self.artifact_id = artifact_id
         super().__init__(
             json.dumps({"error": "artifact_not_found", "artifact_id": artifact_id})
+        )
+
+
+class BoundedRequestRejectedError(ModelerToolError):
+    def __init__(self, violations: list[str]) -> None:
+        self.violations = violations
+        super().__init__(
+            json.dumps({"error": "bounded_request_rejected", "violations": violations})
         )
 
 
@@ -110,3 +123,76 @@ async def modeler_get_artifact(artifact_id: str | None = None) -> dict:
     if artifact is None:
         raise ArtifactNotFoundError(artifact_id)
     return artifact_detail(artifact)
+
+
+def _handle_envelope(envelope: HearthRequestEnvelope) -> dict:
+    try:
+        return handle_hearth_request(
+            envelope,
+            header_correlation_id=None,
+            repository_factory=repository_factory,
+            artifact_store=artifact_store,
+        )
+    except BoundedRequestError as exc:
+        raise BoundedRequestRejectedError(exc.violations) from exc
+
+
+async def modeler_ask(
+    question: str,
+    approval_id: str,
+    correlation_id: str | None = None,
+) -> dict:
+    _require_approval(approval_id, tool="modeler_ask")
+    resolved_correlation_id = correlation_id or _generate_correlation_id()
+    answer = answer_question(repository_factory, feedback_store, question)
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "advisory_only": True,
+        "correlation_id": resolved_correlation_id,
+        "result": answer.model_dump(),
+    }
+
+
+async def modeler_submit_candidate_mapping(
+    text: str,
+    approval_id: str,
+    source_label: str | None = None,
+    correlation_id: str | None = None,
+) -> dict:
+    _require_approval(approval_id, tool="modeler_submit_candidate_mapping")
+    envelope = HearthRequestEnvelope(
+        request_type="mapping.candidate",
+        correlation_id=correlation_id,
+        payload={"text": text, "source_label": source_label},
+    )
+    return _handle_envelope(envelope)
+
+
+async def modeler_critique_docs(
+    approval_id: str,
+    source_type: str = "internal",
+    correlation_id: str | None = None,
+) -> dict:
+    _require_approval(approval_id, tool="modeler_critique_docs")
+    envelope = HearthRequestEnvelope(
+        request_type="docs.critique",
+        correlation_id=correlation_id,
+        payload={"source_type": source_type},
+    )
+    return _handle_envelope(envelope)
+
+
+async def modeler_remove_artifact(
+    artifact_id: str,
+    approval_id: str,
+    reason: str | None = None,
+) -> dict:
+    _require_approval(approval_id, tool="modeler_remove_artifact")
+    from datetime import UTC, datetime
+
+    artifact = artifact_store.remove(
+        artifact_id, reason=reason, removed_at=datetime.now(UTC).isoformat()
+    )
+    if artifact is None:
+        raise ArtifactNotFoundError(artifact_id)
+    return artifact_metadata(artifact)
